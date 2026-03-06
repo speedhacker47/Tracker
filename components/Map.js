@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useRef, useMemo } from 'react';
-import { MapContainer, TileLayer, CircleMarker, Popup, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
 // Status colors matching the design system
@@ -11,27 +12,73 @@ const STATUS_COLORS = {
     offline: '#9ca3af',
 };
 
-const STATUS_FILL = {
-    online: 'rgba(34, 197, 94, 0.25)',
-    idle: 'rgba(245, 158, 11, 0.2)',
-    offline: 'rgba(156, 163, 175, 0.2)',
-};
-
-// India default center
+// India default center (fallback when no vehicles have positions)
 const DEFAULT_CENTER = [20.5937, 78.9629];
 const DEFAULT_ZOOM = 5;
 
-// Component to fly to selected vehicle
-function FlyToVehicle({ vehicles, selectedVehicle }) {
-    const map = useMap();
+/**
+ * Build a custom SVG pin icon for a given status.
+ * The pin has a filled circle on top and a pointed bottom (classic map pin).
+ */
+function createPinIcon(status, isSelected) {
+    const color = STATUS_COLORS[status] || STATUS_COLORS.offline;
+    const size = isSelected ? 38 : 30;
+    const shadow = isSelected ? `drop-shadow(0 4px 8px ${color}88)` : `drop-shadow(0 2px 4px rgba(0,0,0,0.3))`;
 
+    const svg = `
+        <svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size * 1.4}" viewBox="0 0 30 42" style="filter:${shadow}">
+            <!-- Pin body -->
+            <path d="M15 0 C6.716 0 0 6.716 0 15 C0 23.5 15 42 15 42 C15 42 30 23.5 30 15 C30 6.716 23.284 0 15 0 Z"
+                  fill="${color}" />
+            <!-- Inner white circle -->
+            <circle cx="15" cy="15" r="7" fill="white" opacity="0.9"/>
+            <!-- Status dot -->
+            <circle cx="15" cy="15" r="4" fill="${color}"/>
+        </svg>
+    `.trim();
+
+    return L.divIcon({
+        html: svg,
+        className: '',
+        iconSize: [size, size * 1.4],
+        iconAnchor: [size / 2, size * 1.4],   // tip of the pin
+        popupAnchor: [0, -size * 1.4 + 4],    // popup above the pin
+    });
+}
+
+// Auto-fit map to show all vehicle positions, or fly to selected vehicle
+function MapController({ vehicles, selectedVehicle }) {
+    const map = useMap();
+    const initialFitDone = useRef(false);
+
+    // On first load: fit bounds to all positioned vehicles
+    useEffect(() => {
+        if (initialFitDone.current) return;
+        const positioned = vehicles.filter((v) => v.position);
+        if (positioned.length === 0) return;
+
+        initialFitDone.current = true;
+
+        if (positioned.length === 1) {
+            map.setView(
+                [positioned[0].position.latitude, positioned[0].position.longitude],
+                13,
+                { animate: false }
+            );
+        } else {
+            const bounds = positioned.map((v) => [v.position.latitude, v.position.longitude]);
+            map.fitBounds(bounds, { padding: [60, 60], maxZoom: 14, animate: false });
+        }
+    }, [vehicles, map]);
+
+    // When user selects a vehicle: fly to it
     useEffect(() => {
         if (!selectedVehicle) return;
         const vehicle = vehicles.find((v) => v.id === selectedVehicle);
-        if (vehicle && vehicle.position) {
+        if (vehicle?.position) {
             map.flyTo(
                 [vehicle.position.latitude, vehicle.position.longitude],
-                16,
+                15,
                 { duration: 1.2, easeLinearity: 0.25 }
             );
         }
@@ -50,7 +97,7 @@ function formatTimeAgo(dateStr) {
     return `${Math.floor(diff / 86400)}d ago`;
 }
 
-// Status label
+// Status label badge in popup
 function StatusBadge({ status }) {
     const labels = { online: 'Online', idle: 'Idle', offline: 'Offline' };
     return (
@@ -72,9 +119,9 @@ function StatusBadge({ status }) {
 export default function Map({ vehicles, selectedVehicle, onVehicleSelect }) {
     const markerRefs = useRef({});
 
-    // Only show vehicles that have positions
+    // Only show vehicles that have GPS positions
     const positionedVehicles = useMemo(
-        () => vehicles.filter((v) => v.position && v.position.latitude && v.position.longitude),
+        () => vehicles.filter((v) => v.position?.latitude && v.position?.longitude),
         [vehicles]
     );
 
@@ -84,7 +131,7 @@ export default function Map({ vehicles, selectedVehicle, onVehicleSelect }) {
             setTimeout(() => {
                 const marker = markerRefs.current[selectedVehicle];
                 if (marker) marker.openPopup();
-            }, 300);
+            }, 400);
         }
     }, [selectedVehicle]);
 
@@ -101,21 +148,13 @@ export default function Map({ vehicles, selectedVehicle, onVehicleSelect }) {
                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
 
-            <FlyToVehicle vehicles={vehicles} selectedVehicle={selectedVehicle} />
+            <MapController vehicles={vehicles} selectedVehicle={selectedVehicle} />
 
             {positionedVehicles.map((vehicle) => (
-                <CircleMarker
+                <Marker
                     key={vehicle.id}
-                    center={[vehicle.position.latitude, vehicle.position.longitude]}
-                    radius={vehicle.id === selectedVehicle ? 12 : 9}
-                    pathOptions={{
-                        color: STATUS_COLORS[vehicle.status],
-                        fillColor: vehicle.id === selectedVehicle
-                            ? STATUS_COLORS[vehicle.status]
-                            : STATUS_FILL[vehicle.status],
-                        fillOpacity: vehicle.id === selectedVehicle ? 0.5 : 0.4,
-                        weight: vehicle.id === selectedVehicle ? 3 : 2,
-                    }}
+                    position={[vehicle.position.latitude, vehicle.position.longitude]}
+                    icon={createPinIcon(vehicle.status, vehicle.id === selectedVehicle)}
                     ref={(ref) => {
                         if (ref) markerRefs.current[vehicle.id] = ref;
                     }}
@@ -123,7 +162,7 @@ export default function Map({ vehicles, selectedVehicle, onVehicleSelect }) {
                         click: () => onVehicleSelect(vehicle.id),
                     }}
                 >
-                    <Popup closeButton={true} offset={[0, -5]}>
+                    <Popup closeButton={true} offset={[0, -4]}>
                         <div className="popup-content">
                             <div className="popup-title">{vehicle.name}</div>
                             <div className="popup-subtitle">{vehicle.uniqueId}</div>
@@ -153,7 +192,7 @@ export default function Map({ vehicles, selectedVehicle, onVehicleSelect }) {
                             </div>
                         </div>
                     </Popup>
-                </CircleMarker>
+                </Marker>
             ))}
         </MapContainer>
     );
