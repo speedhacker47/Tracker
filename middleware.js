@@ -10,8 +10,8 @@ import { NextResponse } from 'next/server';
 export function middleware(request) {
     const { pathname } = request.nextUrl;
 
-    // Only protect dashboard routes
-    if (pathname.startsWith('/dashboard')) {
+    // Only protect app routes
+    if (pathname.startsWith('/dashboard') || pathname.startsWith('/history') || pathname.startsWith('/vehicles')) {
         const token = request.cookies.get('trackpro_token');
 
         if (!token || !token.value) {
@@ -33,5 +33,5 @@ export function middleware(request) {
 }
 
 export const config = {
-    matcher: ['/dashboard/:path*', '/login'],
+    matcher: ['/dashboard/:path*', '/history/:path*', '/vehicles/:path*', '/login'],
 };

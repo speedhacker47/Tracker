@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Cookies from 'js-cookie';
 import dynamic from 'next/dynamic';
+import NavBar from '@/components/NavBar';
 
 // Dynamically import Map with no SSR (Leaflet breaks on server)
 const MapComponent = dynamic(() => import('@/components/Map'), {
@@ -201,171 +202,144 @@ export default function DashboardPage() {
 
     if (loading) {
         return (
-            <div className="page-loader">
-                <div className="page-loader-content">
-                    <div className="page-loader-logo">
-                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <circle cx="12" cy="12" r="3" />
-                            <path d="M12 2v4" /><path d="M12 18v4" />
-                            <path d="M4.93 4.93l2.83 2.83" /><path d="M16.24 16.24l2.83 2.83" />
-                            <path d="M2 12h4" /><path d="M18 12h4" />
-                            <path d="M4.93 19.07l2.83-2.83" /><path d="M16.24 7.76l2.83-2.83" />
-                        </svg>
+            <div className="app-layout">
+                <NavBar />
+                <div className="page-loader" style={{ minHeight: 'calc(100vh - 56px)' }}>
+                    <div className="page-loader-content">
+                        <div className="map-loading-spinner" />
+                        <p style={{ color: 'var(--gray-400)', fontSize: '0.875rem' }}>Loading dashboard...</p>
                     </div>
-                    <div className="map-loading-spinner" />
-                    <p style={{ color: 'var(--gray-400)', fontSize: '0.875rem' }}>Loading dashboard...</p>
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="dashboard-layout">
-            {/* ===== Sidebar ===== */}
-            <aside className="sidebar">
-                <div className="sidebar-header">
-                    {/* Brand + Logout */}
-                    <div className="sidebar-brand">
-                        <div className="sidebar-logo">
-                            <div className="sidebar-logo-icon">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                    <circle cx="12" cy="12" r="3" />
-                                    <path d="M12 2v4" /><path d="M12 18v4" />
-                                    <path d="M4.93 4.93l2.83 2.83" /><path d="M16.24 16.24l2.83 2.83" />
-                                    <path d="M2 12h4" /><path d="M18 12h4" />
-                                    <path d="M4.93 19.07l2.83-2.83" /><path d="M16.24 7.76l2.83-2.83" />
+        <div className="app-layout">
+            <NavBar />
+            <div className="dashboard-layout">
+                {/* ===== Sidebar ===== */}
+                <aside className="sidebar">
+                    <div className="sidebar-header">
+                        {/* Stats */}
+                        <div className="stats-row">
+                            <div className="stat-badge stat-badge-online">
+                                <span className="stat-badge-count">{stats.online}</span>
+                                Online
+                            </div>
+                            <div className="stat-badge stat-badge-idle">
+                                <span className="stat-badge-count">{stats.idle}</span>
+                                Idle
+                            </div>
+                            <div className="stat-badge stat-badge-offline">
+                                <span className="stat-badge-count">{stats.offline}</span>
+                                Offline
+                            </div>
+                            <div className="stat-badge stat-badge-total">
+                                <span className="stat-badge-count">{stats.total}</span>
+                                Total
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Search */}
+                    <div className="search-box">
+                        <div className="search-input-wrapper">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <circle cx="11" cy="11" r="8" />
+                                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                            </svg>
+                            <input
+                                id="vehicle-search"
+                                type="text"
+                                className="search-input"
+                                placeholder="Search vehicles..."
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
+                            />
+                        </div>
+                    </div>
+
+                    {/* Vehicle List */}
+                    <div className="vehicle-list">
+                        {sortedVehicles.length === 0 ? (
+                            <div className="empty-state">
+                                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                                    <rect x="1" y="3" width="15" height="13" rx="2" />
+                                    <polygon points="16 8 20 8 23 11 23 16 16 16 16 8" />
+                                    <circle cx="5.5" cy="18.5" r="2.5" />
+                                    <circle cx="18.5" cy="18.5" r="2.5" />
                                 </svg>
+                                <p>{search ? 'No vehicles match your search' : 'No vehicles found'}</p>
                             </div>
-                            <span className="sidebar-logo-text">TrackPro</span>
-                        </div>
-                        <button id="logout-btn" className="logout-btn" onClick={handleLogout}>
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-                                <polyline points="16 17 21 12 16 7" />
-                                <line x1="21" y1="12" x2="9" y2="12" />
-                            </svg>
-                            Logout
-                        </button>
-                    </div>
-
-                    {/* Stats */}
-                    <div className="stats-row">
-                        <div className="stat-badge stat-badge-online">
-                            <span className="stat-badge-count">{stats.online}</span>
-                            Online
-                        </div>
-                        <div className="stat-badge stat-badge-idle">
-                            <span className="stat-badge-count">{stats.idle}</span>
-                            Idle
-                        </div>
-                        <div className="stat-badge stat-badge-offline">
-                            <span className="stat-badge-count">{stats.offline}</span>
-                            Offline
-                        </div>
-                        <div className="stat-badge stat-badge-total">
-                            <span className="stat-badge-count">{stats.total}</span>
-                            Total
-                        </div>
-                    </div>
-                </div>
-
-                {/* Search */}
-                <div className="search-box">
-                    <div className="search-input-wrapper">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <circle cx="11" cy="11" r="8" />
-                            <line x1="21" y1="21" x2="16.65" y2="16.65" />
-                        </svg>
-                        <input
-                            id="vehicle-search"
-                            type="text"
-                            className="search-input"
-                            placeholder="Search vehicles..."
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                        />
-                    </div>
-                </div>
-
-                {/* Vehicle List */}
-                <div className="vehicle-list">
-                    {sortedVehicles.length === 0 ? (
-                        <div className="empty-state">
-                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                                <rect x="1" y="3" width="15" height="13" rx="2" />
-                                <polygon points="16 8 20 8 23 11 23 16 16 16 16 8" />
-                                <circle cx="5.5" cy="18.5" r="2.5" />
-                                <circle cx="18.5" cy="18.5" r="2.5" />
-                            </svg>
-                            <p>{search ? 'No vehicles match your search' : 'No vehicles found'}</p>
-                        </div>
-                    ) : (
-                        sortedVehicles.map((vehicle) => (
-                            <div
-                                key={vehicle.id}
-                                id={`vehicle-${vehicle.id}`}
-                                className={`vehicle-card ${selectedVehicle === vehicle.id ? 'active' : ''}`}
-                                onClick={() => handleVehicleClick(vehicle)}
-                            >
-                                <div className={`vehicle-icon vehicle-icon-${vehicle.status}`}>
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                        <rect x="1" y="3" width="15" height="13" rx="2" />
-                                        <polygon points="16 8 20 8 23 11 23 16 16 16 16 8" />
-                                        <circle cx="5.5" cy="18.5" r="2.5" />
-                                        <circle cx="18.5" cy="18.5" r="2.5" />
-                                    </svg>
-                                </div>
-                                <div className="vehicle-info">
-                                    <div className="vehicle-name">{vehicle.name}</div>
-                                    <div className="vehicle-number">{vehicle.uniqueId}</div>
-                                    <div className="vehicle-meta">
-                                        {vehicle.position && (
-                                            <span className="vehicle-speed">
-                                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                                    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
-                                                </svg>
-                                                {Math.round(vehicle.position.speed * 1.852)} km/h
-                                            </span>
-                                        )}
-                                        <span className="vehicle-time">
-                                            {vehicle.position ? formatTimeAgo(vehicle.position.fixTime) : 'No data'}
-                                        </span>
+                        ) : (
+                            sortedVehicles.map((vehicle) => (
+                                <div
+                                    key={vehicle.id}
+                                    id={`vehicle-${vehicle.id}`}
+                                    className={`vehicle-card ${selectedVehicle === vehicle.id ? 'active' : ''}`}
+                                    onClick={() => handleVehicleClick(vehicle)}
+                                >
+                                    <div className={`vehicle-icon vehicle-icon-${vehicle.status}`}>
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                            <rect x="1" y="3" width="15" height="13" rx="2" />
+                                            <polygon points="16 8 20 8 23 11 23 16 16 16 16 8" />
+                                            <circle cx="5.5" cy="18.5" r="2.5" />
+                                            <circle cx="18.5" cy="18.5" r="2.5" />
+                                        </svg>
                                     </div>
+                                    <div className="vehicle-info">
+                                        <div className="vehicle-name">{vehicle.name}</div>
+                                        <div className="vehicle-number">{vehicle.uniqueId}</div>
+                                        <div className="vehicle-meta">
+                                            {vehicle.position && (
+                                                <span className="vehicle-speed">
+                                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+                                                    </svg>
+                                                    {Math.round(vehicle.position.speed * 1.852)} km/h
+                                                </span>
+                                            )}
+                                            <span className="vehicle-time">
+                                                {vehicle.position ? formatTimeAgo(vehicle.position.fixTime) : 'No data'}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div className={`status-dot status-dot-${vehicle.status}`} />
                                 </div>
-                                <div className={`status-dot status-dot-${vehicle.status}`} />
-                            </div>
-                        ))
-                    )}
-                </div>
-            </aside>
+                            ))
+                        )}
+                    </div>
+                </aside>
 
-            {/* ===== Map Area ===== */}
-            <main className="map-container">
-                {/* Refresh indicator */}
-                <div className={`refresh-indicator ${refreshing ? 'refreshing' : ''}`}>
-                    <div className={`refresh-dot ${refreshing ? 'refreshing' : ''}`} />
-                    {refreshing ? 'Updating...' : lastUpdate ? `Last: ${lastUpdate.toLocaleTimeString()}` : 'Loading...'}
-                </div>
+                {/* ===== Map Area ===== */}
+                <main className="map-container">
+                    {/* Refresh indicator */}
+                    <div className={`refresh-indicator ${refreshing ? 'refreshing' : ''}`}>
+                        <div className={`refresh-dot ${refreshing ? 'refreshing' : ''}`} />
+                        {refreshing ? 'Updating...' : lastUpdate ? `Last: ${lastUpdate.toLocaleTimeString()}` : 'Loading...'}
+                    </div>
 
-                {/* Map */}
-                <MapComponent
-                    vehicles={sortedVehicles}
-                    selectedVehicle={selectedVehicle}
-                    onVehicleSelect={setSelectedVehicle}
-                />
-            </main>
+                    {/* Map */}
+                    <MapComponent
+                        vehicles={sortedVehicles}
+                        selectedVehicle={selectedVehicle}
+                        onVehicleSelect={setSelectedVehicle}
+                    />
+                </main>
 
-            {/* Error toast */}
-            {error && (
-                <div className="error-toast">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-                        <line x1="12" y1="9" x2="12" y2="13" />
-                        <line x1="12" y1="17" x2="12.01" y2="17" />
-                    </svg>
-                    {error}
-                </div>
-            )}
+                {/* Error toast */}
+                {error && (
+                    <div className="error-toast">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                            <line x1="12" y1="9" x2="12" y2="13" />
+                            <line x1="12" y1="17" x2="12.01" y2="17" />
+                        </svg>
+                        {error}
+                    </div>
+                )}
+            </div>
         </div>
     );
 }

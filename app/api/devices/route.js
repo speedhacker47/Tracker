@@ -1,66 +1,59 @@
 import { NextResponse } from 'next/server';
-import jwt from 'jsonwebtoken';
+import { verifyToken } from '@/lib/auth';
+import { query } from '@/lib/db';
 import { getDevices } from '@/lib/traccar';
-
-const JWT_SECRET = process.env.JWT_SECRET || 'trackpro-dev-secret-change-in-production';
 
 /**
  * GET /api/devices
- * 
- * Proxies to Traccar /api/devices.
- * Requires valid JWT in Authorization header.
- * 
- * Phase 2: Filter devices by client's assigned devices from client_devices table.
+ *
+ * Returns the logged-in client's assigned devices from Traccar,
+ * enriched with custom vehicle names/numbers from client_devices table.
  */
 export async function GET(request) {
     try {
-        // Verify JWT
-        const authHeader = request.headers.get('Authorization');
-        if (!authHeader || !authHeader.startsWith('Bearer ')) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
-
-        const token = authHeader.split(' ')[1];
+        // ── Auth ──
+        let tokenData;
         try {
-            jwt.verify(token, JWT_SECRET);
-        } catch {
-            return NextResponse.json({ error: 'Invalid or expired token' }, { status: 401 });
+            tokenData = verifyToken(request);
+        } catch (authErr) {
+            return NextResponse.json(
+                { error: authErr.message },
+                { status: authErr.status || 401 }
+            );
         }
 
-        // Fetch devices from Traccar
-        const devices = await getDevices();
+        // ── Get client's assigned device IDs ──
+        const result = await query(
+            'SELECT traccar_device_id, vehicle_name, vehicle_number FROM client_devices WHERE client_id = $1',
+            [tokenData.userId]
+        );
 
-        // ============================================
-        // Phase 2: Filter by client's devices
-        // ============================================
-        // const decoded = jwt.verify(token, JWT_SECRET);
-        // const { Pool } = require('pg');
-        // const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-        // 
-        // const result = await pool.query(
-        //   'SELECT traccar_device_id, vehicle_name, vehicle_number FROM client_devices WHERE client_id = $1',
-        //   [decoded.userId]
-        // );
-        // 
-        // const clientDeviceIds = result.rows.map(r => r.traccar_device_id);
-        // const filteredDevices = devices.filter(d => clientDeviceIds.includes(d.id));
-        // 
-        // // Merge in custom vehicle names
-        // const enrichedDevices = filteredDevices.map(d => {
-        //   const mapping = result.rows.find(r => r.traccar_device_id === d.id);
-        //   return {
-        //     ...d,
-        //     name: mapping?.vehicle_name || d.name,
-        //     vehicleNumber: mapping?.vehicle_number || d.uniqueId,
-        //   };
-        // });
-        // 
-        // return NextResponse.json(enrichedDevices);
-        // ============================================
+        const clientDeviceMap = new Map();
+        for (const row of result.rows) {
+            clientDeviceMap.set(row.traccar_device_id, {
+                vehicleName: row.vehicle_name,
+                vehicleNumber: row.vehicle_number,
+            });
+        }
 
-        return NextResponse.json(devices);
+        // ── Fetch all devices from Traccar ──
+        const allDevices = await getDevices();
+
+        // ── Filter to only client's devices and enrich with custom names ──
+        const clientDevices = allDevices
+            .filter((device) => clientDeviceMap.has(device.id))
+            .map((device) => {
+                const mapping = clientDeviceMap.get(device.id);
+                return {
+                    ...device,
+                    name: mapping.vehicleName || device.name,
+                    vehicleNumber: mapping.vehicleNumber || device.uniqueId,
+                };
+            });
+
+        return NextResponse.json(clientDevices);
     } catch (err) {
-        console.error('Devices API error:', err);
+        console.error('[Devices] Error:', err.message);
         return NextResponse.json(
             { error: 'Failed to fetch devices' },
             { status: 500 }
