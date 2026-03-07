@@ -47,13 +47,27 @@ export default function HistoryMap({ positions, playbackIndex, isPlaying }) {
 
     if (positions.length === 0) {
         return (
-            <div className="map-loading">
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--gray-300)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
-                </svg>
-                <span style={{ color: 'var(--gray-400)', fontSize: '0.875rem' }}>
-                    Select a vehicle and date range to view route history
-                </span>
+            <div style={{
+                height: '100%', width: '100%',
+                display: 'flex', flexDirection: 'column',
+                alignItems: 'center', justifyContent: 'center',
+                background: 'linear-gradient(135deg, #f8faff 0%, #f0f4ff 100%)',
+                gap: '1rem',
+            }}>
+                <div style={{
+                    width: 72, height: 72, borderRadius: '50%',
+                    background: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    boxShadow: '0 4px 20px rgba(59,130,246,0.1)',
+                    border: '1px solid rgba(59,130,246,0.1)',
+                }}>
+                    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="var(--primary-300)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+                    </svg>
+                </div>
+                <div style={{ textAlign: 'center' }}>
+                    <p style={{ fontSize: '0.9375rem', fontWeight: 600, color: 'var(--gray-600)', marginBottom: '0.375rem' }}>No Route Loaded</p>
+                    <p style={{ fontSize: '0.8125rem', color: 'var(--gray-400)' }}>Select a vehicle &amp; date range,<br />then click <strong>Show Route</strong></p>
+                </div>
             </div>
         );
     }
