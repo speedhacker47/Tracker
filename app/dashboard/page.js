@@ -31,7 +31,6 @@ export default function DashboardPage() {
     const [lastUpdate, setLastUpdate] = useState(null);
     const intervalRef = useRef(null);
 
-    // Get user from cookie
     const getUserFromCookie = () => {
         try {
             const userCookie = Cookies.get('trackpro_user');
@@ -43,70 +42,50 @@ export default function DashboardPage() {
 
     const user = getUserFromCookie();
 
-    // Get vehicle status using Traccar's built-in device status
-    // Traccar tracks online/offline via protocol heartbeats (more reliable than fixTime)
     const getVehicleStatus = useCallback((device, position) => {
-        // Primary: use Traccar's device.status field
         const traccarStatus = (device.status || '').toLowerCase();
-
         if (traccarStatus === 'online') {
-            // Device is online — check if moving or idle
-            if (position && position.speed > 0) {
-                return 'online'; // moving
-            }
-            // Online but speed=0 — check how long it's been stationary
+            if (position && position.speed > 0) return 'online';
             if (position && position.fixTime) {
                 const diff = (new Date() - new Date(position.fixTime)) / 1000;
-                if (diff < 300) return 'online'; // recent fix, just stopped
+                if (diff < 300) return 'online';
             }
-            return 'idle'; // online but not moving
+            return 'idle';
         }
-
         if (traccarStatus === 'unknown') return 'idle';
-
         return 'offline';
     }, []);
 
-    // Merge devices and positions into vehicle objects
     const mergeVehicleData = useCallback((devices, positionList) => {
         return devices.map((device) => {
             const position = positionList.find((p) => p.deviceId === device.id) || null;
             const status = getVehicleStatus(device, position);
-
             return {
                 id: device.id,
                 name: device.name || `Device ${device.id}`,
                 uniqueId: device.uniqueId,
                 status,
                 lastUpdate: device.lastUpdate || null,
-                position: position
-                    ? {
-                        latitude: position.latitude,
-                        longitude: position.longitude,
-                        speed: position.speed || 0,
-                        course: position.course || 0,
-                        fixTime: position.fixTime,
-                        serverTime: position.serverTime || null,
-                        address: position.address || null,
-                    }
-                    : null,
+                position: position ? {
+                    latitude: position.latitude,
+                    longitude: position.longitude,
+                    speed: position.speed || 0,
+                    course: position.course || 0,
+                    fixTime: position.fixTime,
+                    serverTime: position.serverTime || null,
+                    address: position.address || null,
+                } : null,
             };
         });
     }, [getVehicleStatus]);
 
-    // Fetch data from our API routes
     const fetchData = useCallback(async (isInitial = false) => {
         try {
             if (!isInitial) setRefreshing(true);
-
             const token = Cookies.get('trackpro_token');
-            if (!token) {
-                router.push('/login');
-                return;
-            }
+            if (!token) { router.push('/login'); return; }
 
             const headers = { Authorization: `Bearer ${token}` };
-
             const [devicesRes, positionsRes] = await Promise.all([
                 fetch('/api/devices', { headers }),
                 fetch('/api/positions', { headers }),
@@ -140,57 +119,31 @@ export default function DashboardPage() {
         }
     }, [router, mergeVehicleData]);
 
-    // Initial fetch + polling
     useEffect(() => {
         fetchData(true);
-
-        intervalRef.current = setInterval(() => {
-            fetchData(false);
-        }, REFRESH_INTERVAL);
-
-        return () => {
-            if (intervalRef.current) clearInterval(intervalRef.current);
-        };
+        intervalRef.current = setInterval(() => fetchData(false), REFRESH_INTERVAL);
+        return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
     }, [fetchData]);
 
-    // Logout
-    const handleLogout = () => {
-        Cookies.remove('trackpro_token');
-        Cookies.remove('trackpro_user');
-        router.push('/login');
-    };
-
-    // Filter vehicles by search
     const filteredVehicles = vehicles.filter((v) => {
         const q = search.toLowerCase();
-        return (
-            v.name.toLowerCase().includes(q) ||
-            (v.uniqueId && v.uniqueId.toLowerCase().includes(q))
-        );
+        return v.name.toLowerCase().includes(q) || (v.uniqueId && v.uniqueId.toLowerCase().includes(q));
     });
 
-    // Sort: online first, then idle, then offline
     const sortedVehicles = [...filteredVehicles].sort((a, b) => {
         const order = { online: 0, idle: 1, offline: 2 };
         return (order[a.status] || 2) - (order[b.status] || 2);
     });
 
-    // Stats
     const stats = vehicles.reduce(
-        (acc, v) => {
-            acc[v.status] = (acc[v.status] || 0) + 1;
-            acc.total++;
-            return acc;
-        },
+        (acc, v) => { acc[v.status] = (acc[v.status] || 0) + 1; acc.total++; return acc; },
         { online: 0, idle: 0, offline: 0, total: 0 }
     );
 
-    // Focus on vehicle
     const handleVehicleClick = (vehicle) => {
         setSelectedVehicle(vehicle.id === selectedVehicle ? null : vehicle.id);
     };
 
-    // Format relative time
     const formatTimeAgo = (dateStr) => {
         if (!dateStr) return '—';
         const diff = (new Date() - new Date(dateStr)) / 1000;
@@ -202,10 +155,10 @@ export default function DashboardPage() {
 
     if (loading) {
         return (
-            <div className="app-layout">
+            <div className="dashboard-shell">
                 <NavBar />
-                <div className="page-loader" style={{ minHeight: 'calc(100vh - 56px)' }}>
-                    <div className="page-loader-content">
+                <div className="dashboard-map-area">
+                    <div className="map-loading">
                         <div className="map-loading-spinner" />
                         <p style={{ color: 'var(--gray-400)', fontSize: '0.875rem' }}>Loading dashboard...</p>
                     </div>
@@ -215,126 +168,142 @@ export default function DashboardPage() {
     }
 
     return (
-        <div className="app-layout">
+        <div className="dashboard-shell">
             <NavBar />
-            <div className="dashboard-layout">
-                {/* ===== Sidebar ===== */}
-                <aside className="sidebar">
-                    <div className="sidebar-header">
-                        {/* Stats */}
-                        <div className="stats-row">
-                            <div className="stat-badge stat-badge-online">
-                                <span className="stat-badge-count">{stats.online}</span>
-                                Online
-                            </div>
-                            <div className="stat-badge stat-badge-idle">
-                                <span className="stat-badge-count">{stats.idle}</span>
-                                Idle
-                            </div>
-                            <div className="stat-badge stat-badge-offline">
-                                <span className="stat-badge-count">{stats.offline}</span>
-                                Offline
-                            </div>
-                            <div className="stat-badge stat-badge-total">
-                                <span className="stat-badge-count">{stats.total}</span>
-                                Total
-                            </div>
+
+            {/* Map fills the right area */}
+            <div className="dashboard-map-area">
+                <MapComponent
+                    vehicles={sortedVehicles}
+                    selectedVehicle={selectedVehicle}
+                    onVehicleSelect={setSelectedVehicle}
+                />
+
+                {/* ===== Floating Left Panels ===== */}
+                <div className="dashboard-float-left">
+                    {/* Stats card */}
+                    <div className="float-stats-card">
+                        <div className="float-stat">
+                            <span className="float-stat-dot" style={{ background: 'var(--success-500)' }} />
+                            <span className="float-stat-count" style={{ color: 'var(--success-600)' }}>{stats.online}</span>
+                            <span className="float-stat-label">Online</span>
+                        </div>
+                        <div className="float-stat-divider" />
+                        <div className="float-stat">
+                            <span className="float-stat-dot" style={{ background: 'var(--warning-500)' }} />
+                            <span className="float-stat-count" style={{ color: 'var(--warning-600)' }}>{stats.idle}</span>
+                            <span className="float-stat-label">Idle</span>
+                        </div>
+                        <div className="float-stat-divider" />
+                        <div className="float-stat">
+                            <span className="float-stat-dot" style={{ background: 'var(--gray-400)' }} />
+                            <span className="float-stat-count" style={{ color: 'var(--gray-600)' }}>{stats.offline}</span>
+                            <span className="float-stat-label">Offline</span>
+                        </div>
+                        <div className="float-stat-divider" />
+                        <div className="float-stat">
+                            <span className="float-stat-dot" style={{ background: 'var(--primary-500)' }} />
+                            <span className="float-stat-count" style={{ color: 'var(--primary-600)' }}>{stats.total}</span>
+                            <span className="float-stat-label">Total</span>
                         </div>
                     </div>
 
-                    {/* Search */}
-                    <div className="search-box">
-                        <div className="search-input-wrapper">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    {/* Vehicle list card */}
+                    <div className="float-vehicles-card">
+                        {/* Search */}
+                        <div className="float-search-row">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--gray-400)', flexShrink: 0 }}>
                                 <circle cx="11" cy="11" r="8" />
                                 <line x1="21" y1="21" x2="16.65" y2="16.65" />
                             </svg>
                             <input
                                 id="vehicle-search"
                                 type="text"
-                                className="search-input"
+                                className="float-search-input"
                                 placeholder="Search vehicles..."
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
                             />
                         </div>
-                    </div>
 
-                    {/* Vehicle List */}
-                    <div className="vehicle-list">
-                        {sortedVehicles.length === 0 ? (
-                            <div className="empty-state">
-                                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                                    <rect x="1" y="3" width="15" height="13" rx="2" />
-                                    <polygon points="16 8 20 8 23 11 23 16 16 16 16 8" />
-                                    <circle cx="5.5" cy="18.5" r="2.5" />
-                                    <circle cx="18.5" cy="18.5" r="2.5" />
-                                </svg>
-                                <p>{search ? 'No vehicles match your search' : 'No vehicles found'}</p>
-                            </div>
-                        ) : (
-                            sortedVehicles.map((vehicle) => (
-                                <div
-                                    key={vehicle.id}
-                                    id={`vehicle-${vehicle.id}`}
-                                    className={`vehicle-card ${selectedVehicle === vehicle.id ? 'active' : ''}`}
-                                    onClick={() => handleVehicleClick(vehicle)}
-                                >
-                                    <div className={`vehicle-icon vehicle-icon-${vehicle.status}`}>
-                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                            <rect x="1" y="3" width="15" height="13" rx="2" />
-                                            <polygon points="16 8 20 8 23 11 23 16 16 16 16 8" />
-                                            <circle cx="5.5" cy="18.5" r="2.5" />
-                                            <circle cx="18.5" cy="18.5" r="2.5" />
-                                        </svg>
-                                    </div>
-                                    <div className="vehicle-info">
-                                        <div className="vehicle-name">{vehicle.name}</div>
-                                        <div className="vehicle-number">{vehicle.uniqueId}</div>
-                                        <div className="vehicle-meta">
-                                            {vehicle.position && (
-                                                <span className="vehicle-speed">
-                                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                                        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
-                                                    </svg>
-                                                    {Math.round(vehicle.position.speed * 1.852)} km/h
+                        {/* Header row */}
+                        <div className="float-list-header">
+                            <span>All Vehicles</span>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--gray-400)' }}>
+                                <line x1="4" y1="6" x2="20" y2="6" /><line x1="8" y1="12" x2="16" y2="12" /><line x1="10" y1="18" x2="14" y2="18" />
+                            </svg>
+                        </div>
+
+                        {/* List */}
+                        <div className="float-vehicle-list">
+                            {sortedVehicles.length === 0 ? (
+                                <div className="empty-state" style={{ padding: '2rem 1rem' }}>
+                                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                                        <rect x="1" y="3" width="15" height="13" rx="2" />
+                                        <polygon points="16 8 20 8 23 11 23 16 16 16 16 8" />
+                                        <circle cx="5.5" cy="18.5" r="2.5" />
+                                        <circle cx="18.5" cy="18.5" r="2.5" />
+                                    </svg>
+                                    <p>{search ? 'No matches' : 'No vehicles'}</p>
+                                </div>
+                            ) : (
+                                sortedVehicles.map((vehicle) => (
+                                    <div
+                                        key={vehicle.id}
+                                        id={`vehicle-${vehicle.id}`}
+                                        className={`float-vehicle-row ${selectedVehicle === vehicle.id ? 'active' : ''}`}
+                                        onClick={() => handleVehicleClick(vehicle)}
+                                    >
+                                        <div className={`vehicle-icon vehicle-icon-${vehicle.status}`}>
+                                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                <rect x="1" y="3" width="15" height="13" rx="2" />
+                                                <polygon points="16 8 20 8 23 11 23 16 16 16 16 8" />
+                                                <circle cx="5.5" cy="18.5" r="2.5" />
+                                                <circle cx="18.5" cy="18.5" r="2.5" />
+                                            </svg>
+                                        </div>
+                                        <div className="vehicle-info">
+                                            <div className="float-vehicle-name">{vehicle.name}</div>
+                                            <div className="vehicle-number">{vehicle.uniqueId}</div>
+                                            <div className="vehicle-meta">
+                                                {vehicle.position && (
+                                                    <span className="vehicle-speed">
+                                                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+                                                        </svg>
+                                                        {Math.round(vehicle.position.speed * 1.852)} km/h
+                                                    </span>
+                                                )}
+                                                <span className="vehicle-time">
+                                                    {vehicle.position ? formatTimeAgo(vehicle.position.fixTime) : 'No data'}
                                                 </span>
-                                            )}
-                                            <span className="vehicle-time">
-                                                {vehicle.position ? formatTimeAgo(vehicle.position.fixTime) : 'No data'}
+                                            </div>
+                                        </div>
+                                        <div className="float-vehicle-status">
+                                            <span className={`float-status-dot float-status-${vehicle.status}`} />
+                                            <span className={`float-status-label float-status-label-${vehicle.status}`}>
+                                                {vehicle.status.charAt(0).toUpperCase() + vehicle.status.slice(1)}
                                             </span>
                                         </div>
                                     </div>
-                                    <div className={`status-dot status-dot-${vehicle.status}`} />
-                                </div>
-                            ))
-                        )}
+                                ))
+                            )}
+                        </div>
                     </div>
-                </aside>
+                </div>
 
-                {/* ===== Map Area ===== */}
-                <main className="map-container">
-                    {/* Refresh indicator */}
-                    <div className={`refresh-indicator ${refreshing ? 'refreshing' : ''}`}>
-                        <div className={`refresh-dot ${refreshing ? 'refreshing' : ''}`} />
-                        {refreshing ? 'Updating...' : lastUpdate ? `Last: ${lastUpdate.toLocaleTimeString()}` : 'Loading...'}
-                    </div>
-
-                    {/* Map */}
-                    <MapComponent
-                        vehicles={sortedVehicles}
-                        selectedVehicle={selectedVehicle}
-                        onVehicleSelect={setSelectedVehicle}
-                    />
-                </main>
+                {/* ===== Top-right sync indicator ===== */}
+                <div className={`refresh-indicator ${refreshing ? 'refreshing' : ''}`}>
+                    <div className={`refresh-dot ${refreshing ? 'refreshing' : ''}`} />
+                    {refreshing ? 'Updating...' : lastUpdate ? `Last sync: ${lastUpdate.toLocaleTimeString()}` : 'Loading...'}
+                </div>
 
                 {/* Error toast */}
                 {error && (
                     <div className="error-toast">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                             <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-                            <line x1="12" y1="9" x2="12" y2="13" />
-                            <line x1="12" y1="17" x2="12.01" y2="17" />
+                            <line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" />
                         </svg>
                         {error}
                     </div>
