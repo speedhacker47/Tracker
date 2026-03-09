@@ -43,7 +43,7 @@ export async function GET(request) {
         try {
             const cached = await redis.get(CACHE_KEY);
             if (cached) {
-                // Upstash returns parsed JSON directly
+                // ioredis always returns strings — parse to get the array back
                 positions = typeof cached === 'string' ? JSON.parse(cached) : cached;
             }
         } catch (cacheErr) {
@@ -57,7 +57,7 @@ export async function GET(request) {
 
             // Cache for 30 seconds
             try {
-                await redis.set(CACHE_KEY, JSON.stringify(positions), { ex: 30 });
+                await redis.set(CACHE_KEY, JSON.stringify(positions), 'EX', 30);
             } catch (cacheErr) {
                 console.warn('[Positions] Redis write error:', cacheErr.message);
             }

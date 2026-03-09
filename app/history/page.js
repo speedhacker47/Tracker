@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Cookies from 'js-cookie';
 import dynamic from 'next/dynamic';
 import NavBar from '@/components/NavBar';
+import { apiFetch } from '@/lib/api';
 
 const HistoryMapComponent = dynamic(() => import('@/components/HistoryMap'), {
     ssr: false,
@@ -92,7 +93,7 @@ export default function HistoryPage() {
             const token = Cookies.get('trackpro_token');
             if (!token) { router.push('/login'); return; }
             try {
-                const res = await fetch('/api/devices', {
+                const res = await apiFetch('/api/devices', {
                     headers: { Authorization: `Bearer ${token}` },
                 });
                 if (res.status === 401) { router.push('/login'); return; }
@@ -128,7 +129,7 @@ export default function HistoryPage() {
             const toISO = new Date(`${dateTo}T23:59:59`).toISOString();
             const params = new URLSearchParams({ deviceId: selectedDevice, from: fromISO, to: toISO });
 
-            const res = await fetch(`/api/history?${params}`, {
+            const res = await apiFetch(`/api/history?${params}`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
 

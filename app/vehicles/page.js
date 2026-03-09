@@ -6,6 +6,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Cookies from 'js-cookie';
 import NavBar from '@/components/NavBar';
+import { apiFetch } from '@/lib/api';
 
 const REFRESH_INTERVAL = 30000; // 30 seconds
 
@@ -65,8 +66,8 @@ export default function VehiclesPage() {
         try {
             const headers = { Authorization: `Bearer ${token}` };
             const [devRes, posRes] = await Promise.all([
-                fetch('/api/devices', { headers }),
-                fetch('/api/positions', { headers }),
+                apiFetch('/api/devices', { headers }),
+                apiFetch('/api/positions', { headers }),
             ]);
 
             if (devRes.status === 401) { router.push('/login'); return; }

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Cookies from 'js-cookie';
 import dynamic from 'next/dynamic';
 import NavBar from '@/components/NavBar';
+import { apiFetch } from '@/lib/api';
 
 // Dynamically import Map with no SSR (Leaflet breaks on server)
 const MapComponent = dynamic(() => import('@/components/Map'), {
@@ -87,8 +88,8 @@ export default function DashboardPage() {
 
             const headers = { Authorization: `Bearer ${token}` };
             const [devicesRes, positionsRes] = await Promise.all([
-                fetch('/api/devices', { headers }),
-                fetch('/api/positions', { headers }),
+                apiFetch('/api/devices', { headers }),
+                apiFetch('/api/positions', { headers }),
             ]);
 
             if (devicesRes.status === 401 || positionsRes.status === 401) {
