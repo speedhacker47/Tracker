@@ -70,15 +70,14 @@ services:
     restart: unless-stopped
     volumes:
       - traccar_data:/opt/traccar/data
+      - ./tracker/config/traccar.xml:/opt/traccar/conf/traccar.xml
     networks:
       - trackpro_net
     ports:
-      # GPS device protocols — exposed publicly for GPS trackers to report
       - "5001:5001"
       - "5013:5013"
       - "5023:5023"
       - "5055:5055"
-      # Web UI — internal only (accessed via Nginx reverse proxy)
     expose:
       - "8082"
     depends_on:
