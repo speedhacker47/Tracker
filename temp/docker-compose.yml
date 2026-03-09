@@ -1,0 +1,161 @@
+version: '3.8'
+
+# ──────────────────────────────────────────────────────────────────────────────
+# TrackPro — Full AWS Stack
+# All services on the same internal Docker network.
+# Only Nginx (80/443) and GPS ports (5001/5013/5023/5055) are exposed publicly.
+# ──────────────────────────────────────────────────────────────────────────────
+
+networks:
+  trackpro_net:
+    driver: bridge
+
+volumes:
+  timescaledb_data:
+    external: true
+    name: tracker_db-data        # ← your existing volume
+  redis_data:
+    external: true
+    name: tracker_redis-data     # ← your existing volume
+  traccar_data:
+  pgadmin_data:
+
+services:
+
+  # ── TimescaleDB (PostgreSQL) ─────────────────────────────────────────────────
+  timescaledb:
+    image: timescale/timescaledb:latest-pg15
+    container_name: timescaledb
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: trackeruser
+      POSTGRES_PASSWORD: "TrackerDB@2024!"
+      POSTGRES_DB: trackerdb
+    volumes:
+      - timescaledb_data:/var/lib/postgresql/data
+    networks:
+      - trackpro_net
+    # NOT exposed to host — internal only via Docker network
+    expose:
+      - "5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U trackeruser -d trackerdb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Redis ────────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:alpine
+    container_name: redis
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    networks:
+      - trackpro_net
+    # NOT exposed to host — internal only
+    expose:
+      - "6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    command: redis-server --appendonly yes
+
+  # ── Traccar (GPS Server) ─────────────────────────────────────────────────────
+  traccar:
+    image: traccar/traccar:latest
+    container_name: traccar
+    restart: unless-stopped
+    volumes:
+      - traccar_data:/opt/traccar/data
+    networks:
+      - trackpro_net
+    ports:
+      # GPS device protocols — exposed publicly for GPS trackers to report
+      - "5001:5001"
+      - "5013:5013"
+      - "5023:5023"
+      - "5055:5055"
+      # Web UI — internal only (accessed via Nginx reverse proxy)
+    expose:
+      - "8082"
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+
+  # ── Next.js API (TrackPro) ───────────────────────────────────────────────────
+  nextjs:
+    build:
+      context: ./tracker
+      dockerfile: Dockerfile
+      args:
+        # NEXT_PUBLIC_ vars are baked in at build time
+        NEXT_PUBLIC_API_URL: "http://13.205.187.228"
+        NEXT_PUBLIC_APP_NAME: "TrackPro"
+        # Traccar URL is NOT public — do NOT pass as build arg
+    container_name: nextjs
+    restart: unless-stopped
+    env_file:
+      - ./tracker/.env.production
+    networks:
+      - trackpro_net
+    expose:
+      - "3000"
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      traccar:
+        condition: service_started
+
+  # ── Nginx (Reverse Proxy) ────────────────────────────────────────────────────
+  nginx:
+    image: nginx:alpine
+    container_name: nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro        # Mount SSL certs here when ready
+    networks:
+      - trackpro_net
+    depends_on:
+      - nextjs
+      - traccar
+
+  # ── pgAdmin (Internal management UI) ─────────────────────────────────────────
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: electro.wizard24k@gmail.com
+      PGADMIN_DEFAULT_PASSWORD: "admin"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    networks:
+      - trackpro_net
+    ports:
+      # Exposed on 5050 — restrict via security group to your IP only
+      - "5050:80"
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+
+  # ── RedisInsight (Internal Redis UI) ─────────────────────────────────────────
+  redisinsight:
+    image: redis/redisinsight:latest
+    container_name: redisinsight
+    restart: unless-stopped
+    networks:
+      - trackpro_net
+    ports:
+      # Exposed on 5540 — restrict via security group to your IP only
+      - "5540:5540"
+    depends_on:
+      - redis
