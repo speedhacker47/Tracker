@@ -2,17 +2,18 @@ import { NextResponse } from 'next/server';
 
 /**
  * Middleware to protect /dashboard routes.
- * Redirects to /login if no trackpro_token cookie is present.
- * 
- * Note: This is a client-side cookie check. Full JWT verification
- * happens in the API routes themselves.
+ * Redirects to /login if no firebase_token cookie is present.
+ *
+ * Note: This is a client-side cookie check only. Full Firebase ID Token
+ * verification happens in the API routes via Firebase Admin SDK.
+ * (Edge Runtime cannot run Firebase Admin SDK.)
  */
 export function middleware(request) {
     const { pathname } = request.nextUrl;
 
     // Only protect app routes
     if (pathname.startsWith('/dashboard') || pathname.startsWith('/history') || pathname.startsWith('/vehicles')) {
-        const token = request.cookies.get('trackpro_token');
+        const token = request.cookies.get('firebase_token');
 
         if (!token || !token.value) {
             const loginUrl = new URL('/login', request.url);
@@ -23,7 +24,7 @@ export function middleware(request) {
 
     // If user is logged in and visits /login, redirect to dashboard
     if (pathname === '/login') {
-        const token = request.cookies.get('trackpro_token');
+        const token = request.cookies.get('firebase_token');
         if (token && token.value) {
             return NextResponse.redirect(new URL('/dashboard', request.url));
         }

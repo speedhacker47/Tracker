@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { verifyToken } from '@/lib/auth';
+import { verifyFirebaseToken } from '@/lib/firebase-admin';
 import { query } from '@/lib/db';
 import { getDevicePositions } from '@/lib/traccar';
 
@@ -11,10 +11,10 @@ import { getDevicePositions } from '@/lib/traccar';
  */
 export async function GET(request) {
     try {
-        // ── Auth ──
-        let tokenData;
+        // ── Auth (Firebase) ──
+        let decodedToken;
         try {
-            tokenData = verifyToken(request);
+            decodedToken = await verifyFirebaseToken(request);
         } catch (authErr) {
             return NextResponse.json(
                 { error: authErr.message },
@@ -45,8 +45,8 @@ export async function GET(request) {
 
         // ── Verify device ownership ──
         const ownershipCheck = await query(
-            'SELECT id FROM client_devices WHERE client_id = $1 AND traccar_device_id = $2',
-            [tokenData.userId, deviceIdNum]
+            'SELECT id FROM client_devices WHERE firebase_uid = $1 AND traccar_device_id = $2',
+            [decodedToken.uid, deviceIdNum]
         );
 
         if (ownershipCheck.rows.length === 0) {

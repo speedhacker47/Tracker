@@ -33,12 +33,9 @@ export default function DashboardPage() {
     const intervalRef = useRef(null);
 
     const getUserFromCookie = () => {
-        try {
-            const userCookie = Cookies.get('trackpro_user');
-            return userCookie ? JSON.parse(userCookie) : null;
-        } catch {
-            return null;
-        }
+        // User info is now managed via Firebase auth state
+        // Cookie-based user info is no longer used
+        return null;
     };
 
     const user = getUserFromCookie();
@@ -83,18 +80,17 @@ export default function DashboardPage() {
     const fetchData = useCallback(async (isInitial = false) => {
         try {
             if (!isInitial) setRefreshing(true);
-            const token = Cookies.get('trackpro_token');
+            const token = Cookies.get('firebase_token');
             if (!token) { router.push('/login'); return; }
 
-            const headers = { Authorization: `Bearer ${token}` };
+            const headers = {};
             const [devicesRes, positionsRes] = await Promise.all([
                 apiFetch('/api/devices', { headers }),
                 apiFetch('/api/positions', { headers }),
             ]);
 
             if (devicesRes.status === 401 || positionsRes.status === 401) {
-                Cookies.remove('trackpro_token');
-                Cookies.remove('trackpro_user');
+                Cookies.remove('firebase_token');
                 router.push('/login');
                 return;
             }

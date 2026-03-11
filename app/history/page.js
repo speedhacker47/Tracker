@@ -90,12 +90,10 @@ export default function HistoryPage() {
     // Fetch devices on mount
     useEffect(() => {
         const fetchDevices = async () => {
-            const token = Cookies.get('trackpro_token');
+            const token = Cookies.get('firebase_token');
             if (!token) { router.push('/login'); return; }
             try {
-                const res = await apiFetch('/api/devices', {
-                    headers: { Authorization: `Bearer ${token}` },
-                });
+                const res = await apiFetch('/api/devices');
                 if (res.status === 401) { router.push('/login'); return; }
                 if (res.ok) {
                     const data = await res.json();
@@ -122,16 +120,14 @@ export default function HistoryPage() {
         setPositions([]);
 
         try {
-            const token = Cookies.get('trackpro_token');
+            const token = Cookies.get('firebase_token');
             if (!token) { router.push('/login'); return; }
 
             const fromISO = new Date(`${dateFrom}T00:00:00`).toISOString();
             const toISO = new Date(`${dateTo}T23:59:59`).toISOString();
             const params = new URLSearchParams({ deviceId: selectedDevice, from: fromISO, to: toISO });
 
-            const res = await apiFetch(`/api/history?${params}`, {
-                headers: { Authorization: `Bearer ${token}` },
-            });
+            const res = await apiFetch(`/api/history?${params}`);
 
             if (res.ok) {
                 const data = await res.json();

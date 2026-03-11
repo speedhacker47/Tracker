@@ -2,6 +2,8 @@
 
 import { usePathname, useRouter } from 'next/navigation';
 import Cookies from 'js-cookie';
+import { signOut } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
 
 const NAV_ITEMS = [
     {
@@ -44,9 +46,13 @@ export default function NavBar() {
     const pathname = usePathname();
     const router = useRouter();
 
-    const handleLogout = () => {
-        Cookies.remove('trackpro_token');
-        Cookies.remove('trackpro_user');
+    const handleLogout = async () => {
+        try {
+            await signOut(auth);
+        } catch (err) {
+            console.error('Firebase sign-out error:', err);
+        }
+        Cookies.remove('firebase_token');
         router.push('/login');
     };
 

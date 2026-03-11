@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { verifyToken } from '@/lib/auth';
+import { verifyFirebaseToken } from '@/lib/firebase-admin';
 import { query } from '@/lib/db';
 import { getDevices } from '@/lib/traccar';
 
@@ -11,10 +11,10 @@ import { getDevices } from '@/lib/traccar';
  */
 export async function GET(request) {
     try {
-        // ── Auth ──
-        let tokenData;
+        // ── Auth (Firebase) ──
+        let decodedToken;
         try {
-            tokenData = verifyToken(request);
+            decodedToken = await verifyFirebaseToken(request);
         } catch (authErr) {
             return NextResponse.json(
                 { error: authErr.message },
@@ -24,8 +24,8 @@ export async function GET(request) {
 
         // ── Get client's assigned device IDs ──
         const result = await query(
-            'SELECT traccar_device_id, vehicle_name, vehicle_number FROM client_devices WHERE client_id = $1',
-            [tokenData.userId]
+            'SELECT traccar_device_id, vehicle_name, vehicle_number FROM client_devices WHERE firebase_uid = $1',
+            [decodedToken.uid]
         );
 
         const clientDeviceMap = new Map();

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { verifyToken } from '@/lib/auth';
+import { verifyFirebaseToken } from '@/lib/firebase-admin';
 import { query } from '@/lib/db';
 import { redis } from '@/lib/redis';
 import { getPositions } from '@/lib/traccar';
@@ -17,10 +17,10 @@ import { getPositions } from '@/lib/traccar';
  */
 export async function GET(request) {
     try {
-        // ── Auth ──
-        let tokenData;
+        // ── Auth (Firebase) ──
+        let decodedToken;
         try {
-            tokenData = verifyToken(request);
+            decodedToken = await verifyFirebaseToken(request);
         } catch (authErr) {
             return NextResponse.json(
                 { error: authErr.message },
@@ -30,8 +30,8 @@ export async function GET(request) {
 
         // ── Get client's assigned device IDs ──
         const result = await query(
-            'SELECT traccar_device_id FROM client_devices WHERE client_id = $1',
-            [tokenData.userId]
+            'SELECT traccar_device_id FROM client_devices WHERE firebase_uid = $1',
+            [decodedToken.uid]
         );
 
         const clientDeviceIds = new Set(result.rows.map((r) => r.traccar_device_id));

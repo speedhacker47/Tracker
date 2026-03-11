@@ -60,11 +60,11 @@ export default function VehiclesPage() {
     const [lastRefresh, setLastRefresh] = useState(null);
 
     const fetchData = useCallback(async () => {
-        const token = Cookies.get('trackpro_token');
+        const token = Cookies.get('firebase_token');
         if (!token) { router.push('/login'); return; }
 
         try {
-            const headers = { Authorization: `Bearer ${token}` };
+            const headers = {};
             const [devRes, posRes] = await Promise.all([
                 apiFetch('/api/devices', { headers }),
                 apiFetch('/api/positions', { headers }),
