@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import NavBar from '@/components/NavBar';
 import { apiFetch } from '@/lib/api';
-import { onAuthStateChanged } from 'firebase/auth';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 
 // Dynamically import Map with no SSR (Leaflet breaks on server)
@@ -99,7 +99,7 @@ export default function DashboardPage() {
             ]);
 
             if (devicesRes.status === 401 || positionsRes.status === 401) {
-                Cookies.remove('firebase_token');
+                await signOut(auth);
                 router.push('/login');
                 return;
             }

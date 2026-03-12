@@ -4,7 +4,6 @@ import React from 'react';
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import Cookies from 'js-cookie';
 import NavBar from '@/components/NavBar';
 import { apiFetch } from '@/lib/api';
 import { onAuthStateChanged } from 'firebase/auth';
