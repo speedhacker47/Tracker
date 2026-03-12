@@ -71,13 +71,15 @@ function LoginContent() {
     const handleAuthSuccess = async (user) => {
         try {
             const idToken = await user.getIdToken();
-            // Cookie expires in 1 hour (Firebase tokens expire in 1 hour)
-            // Firebase SDK auto-refreshes; cookie is only for middleware route guard
-            Cookies.set('firebase_token', idToken, { expires: 1 / 24, sameSite: 'Lax' });
+            // Set cookie with secure flag for HTTPS (Vercel)
+            Cookies.set('firebase_token', idToken, {
+                expires: 1,           // 1 day (not 1 hour — token auto-refreshes anyway)
+                sameSite: 'Lax',
+                secure: true,         // required for HTTPS on Vercel
+            });
             router.push(redirect);
         } catch (err) {
-            setError('Failed to get authentication token.');
-            setLoading(false);
+            setError('Failed to get authentication token. Please try again.');
         }
     };
 

@@ -52,7 +52,7 @@ export default function NavBar() {
         } catch (err) {
             console.error('Firebase sign-out error:', err);
         }
-        Cookies.remove('firebase_token');
+        Cookies.remove('firebase_token', { secure: true, sameSite: 'Lax' });
         router.push('/login');
     };
 
