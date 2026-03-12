@@ -6,7 +6,6 @@ const nextConfig = {
     remotePatterns: [],
   },
 
-  // Proxy API calls through Vercel to avoid mixed content HTTPS issue
   async rewrites() {
     return [
       {
@@ -23,7 +22,7 @@ const nextConfig = {
         headers: [
           {
             key: 'Access-Control-Allow-Origin',
-            value: process.env.ALLOWED_ORIGIN || '*',
+            value: '*',
           },
           {
             key: 'Access-Control-Allow-Methods',
