@@ -217,7 +217,7 @@ export default function DashboardPage() {
                                 id="vehicle-search"
                                 type="text"
                                 className="float-search-input"
-                                placeholder="Search vehicles..."
+                                placeholder="Search vehicles....."
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
                             />

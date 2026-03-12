@@ -268,7 +268,7 @@ export default function VehiclesPage() {
                             </svg>
                             <input
                                 type="text"
-                                placeholder="Search vehicles..."
+                                placeholder="Search vehicles....."
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
                                 style={{
