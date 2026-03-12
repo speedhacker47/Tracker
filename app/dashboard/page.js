@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import Cookies from 'js-cookie';
 import dynamic from 'next/dynamic';
 import NavBar from '@/components/NavBar';
 import { apiFetch } from '@/lib/api';
@@ -80,8 +79,16 @@ export default function DashboardPage() {
     const fetchData = useCallback(async (isInitial = false) => {
         try {
             if (!isInitial) setRefreshing(true);
-            const token = Cookies.get('firebase_token');
-            if (!token) { router.push('/login'); return; }
+
+            // Wait for Firebase auth state
+            const user = await new Promise((resolve) => {
+                const unsubscribe = onAuthStateChanged(auth, (u) => {
+                    unsubscribe();
+                    resolve(u);
+                });
+            });
+
+            if (!user) { router.push('/login'); return; }
 
             const headers = {};
             const [devicesRes, positionsRes] = await Promise.all([

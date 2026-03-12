@@ -60,8 +60,11 @@ export default function VehiclesPage() {
     const [lastRefresh, setLastRefresh] = useState(null);
 
     const fetchData = useCallback(async () => {
-        const token = Cookies.get('firebase_token');
-        if (!token) { router.push('/login'); return; }
+        const { onAuthStateChanged } = await import('firebase/auth');
+        const user = await new Promise((resolve) => {
+            const unsub = onAuthStateChanged(auth, (u) => { unsub(); resolve(u); });
+        });
+        if (!user) { router.push('/login'); return; }
 
         try {
             const headers = {};

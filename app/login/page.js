@@ -70,13 +70,7 @@ function LoginContent() {
     // Store token and redirect
     const handleAuthSuccess = async (user) => {
         try {
-            const idToken = await user.getIdToken();
-            // Set cookie with secure flag for HTTPS (Vercel)
-            Cookies.set('firebase_token', idToken, {
-                expires: 1,           // 1 day (not 1 hour — token auto-refreshes anyway)
-                sameSite: 'Lax',
-                secure: true,         // required for HTTPS on Vercel
-            });
+            await user.getIdToken(); // ensure token is ready
             router.push(redirect);
         } catch (err) {
             setError('Failed to get authentication token. Please try again.');

@@ -90,8 +90,11 @@ export default function HistoryPage() {
     // Fetch devices on mount
     useEffect(() => {
         const fetchDevices = async () => {
-            const token = Cookies.get('firebase_token');
-            if (!token) { router.push('/login'); return; }
+            const { onAuthStateChanged } = await import('firebase/auth');
+            const user = await new Promise((resolve) => {
+                const unsub = onAuthStateChanged(auth, (u) => { unsub(); resolve(u); });
+            });
+            if (!user) { router.push('/login'); return; }
             try {
                 const res = await apiFetch('/api/devices');
                 if (res.status === 401) { router.push('/login'); return; }
