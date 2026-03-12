@@ -3,7 +3,7 @@ name: Deploy API to AWS
 on:
   push:
     branches:
-      - main
+      - master
 
 jobs:
   deploy:
@@ -17,19 +17,12 @@ jobs:
           username: ${{ secrets.AWS_USER }}
           key: ${{ secrets.AWS_SSH_KEY }}
           script: |
-            cd ${{ secrets.AWS_PROJECT_PATH }}/tracker
-
-            # Pull latest code from GitHub
-            git pull origin main
-
-            # If repo is a subfolder, adjust:
-            # git -C /home/ubuntu/trackpro/tracker pull origin main
-
-            # Rebuild and restart only the API container
-            cd ${{ secrets.AWS_PROJECT_PATH }}
-            docker compose up -d --build nextjs
-
-            # Clean up old unused images
-            docker image prune -f
-
-            echo "✅ Deploy complete at $(date)"
+          # Pull latest code
+          git -C ${{ secrets.AWS_PROJECT_PATH }}/tracker pull origin master
+        
+          # Rebuild API container
+          cd ${{ secrets.AWS_PROJECT_PATH }}
+          docker compose up -d --build nextjs
+          docker image prune -f
+        
+          echo "✅ Deploy complete at $(date)"
