@@ -6,6 +6,8 @@ import Cookies from 'js-cookie';
 import dynamic from 'next/dynamic';
 import NavBar from '@/components/NavBar';
 import { apiFetch } from '@/lib/api';
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
 
 const HistoryMapComponent = dynamic(() => import('@/components/HistoryMap'), {
     ssr: false,
@@ -123,8 +125,10 @@ export default function HistoryPage() {
         setPositions([]);
 
         try {
-            const token = Cookies.get('firebase_token');
-            if (!token) { router.push('/login'); return; }
+            const user = await new Promise((resolve) => {
+                const unsub = onAuthStateChanged(auth, (u) => { unsub(); resolve(u); });
+            });
+            if (!user) { router.push('/login'); return; }
 
             const fromISO = new Date(`${dateFrom}T00:00:00`).toISOString();
             const toISO = new Date(`${dateTo}T23:59:59`).toISOString();

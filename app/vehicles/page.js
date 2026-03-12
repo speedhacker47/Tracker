@@ -7,6 +7,8 @@ import { useRouter } from 'next/navigation';
 import Cookies from 'js-cookie';
 import NavBar from '@/components/NavBar';
 import { apiFetch } from '@/lib/api';
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
 
 const REFRESH_INTERVAL = 30000; // 30 seconds
 

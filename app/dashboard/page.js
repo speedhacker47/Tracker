@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import NavBar from '@/components/NavBar';
 import { apiFetch } from '@/lib/api';
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
 
 // Dynamically import Map with no SSR (Leaflet breaks on server)
 const MapComponent = dynamic(() => import('@/components/Map'), {
