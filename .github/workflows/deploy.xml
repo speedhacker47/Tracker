@@ -1,0 +1,35 @@
+name: Deploy API to AWS
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy to AWS via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.AWS_HOST }}
+          username: ${{ secrets.AWS_USER }}
+          key: ${{ secrets.AWS_SSH_KEY }}
+          script: |
+            cd ${{ secrets.AWS_PROJECT_PATH }}/tracker
+
+            # Pull latest code from GitHub
+            git pull origin main
+
+            # If repo is a subfolder, adjust:
+            # git -C /home/ubuntu/trackpro/tracker pull origin main
+
+            # Rebuild and restart only the API container
+            cd ${{ secrets.AWS_PROJECT_PATH }}
+            docker compose up -d --build nextjs
+
+            # Clean up old unused images
+            docker image prune -f
+
+            echo "✅ Deploy complete at $(date)"
