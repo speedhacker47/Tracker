@@ -34,7 +34,7 @@ export async function GET(request) {
             [decodedToken.uid]
         );
 
-        const clientDeviceIds = new Set(result.rows.map((r) => r.traccar_device_id));
+        const clientDeviceIds = new Set(result.rows.map((r) => Number(r.traccar_device_id)));
 
         // ── Check Redis cache ──
         const CACHE_KEY = 'trackpro:positions';
