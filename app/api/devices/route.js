@@ -30,7 +30,7 @@ export async function GET(request) {
 
         const clientDeviceMap = new Map();
         for (const row of result.rows) {
-            clientDeviceMap.set(row.traccar_device_id, {
+            clientDeviceMap.set(Number(row.traccar_device_id), {
                 vehicleName: row.vehicle_name,
                 vehicleNumber: row.vehicle_number,
             });
