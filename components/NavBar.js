@@ -90,7 +90,7 @@ const LS_KEY = 'trackpro_nav_expanded';
 export default function NavBar() {
     const pathname = usePathname();
     const router = useRouter();
-    const [expanded, setExpanded] = useState(false);
+    const [expanded, setExpanded] = useState(true);
     const [ready, setReady] = useState(false);
 
     useEffect(() => {
