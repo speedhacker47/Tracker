@@ -1,27 +1,12 @@
 'use client';
 
-import { useEffect, useRef, useMemo, useState } from 'react';
-import { MapContainer, TileLayer, Polyline, CircleMarker, Popup, useMap } from 'react-leaflet';
-import 'leaflet/dist/leaflet.css';
+import { useEffect, useRef, useMemo, useState, useCallback } from 'react';
+import { GoogleMap, useJsApiLoader, PolylineF, MarkerF, InfoWindowF } from '@react-google-maps/api';
 
 const ROUTE_COLOR = '#3b82f6';
 const MARKER_COLOR = '#2563eb';
 const START_COLOR = '#22c55e';
 const END_COLOR = '#ef4444';
-
-// Fit map bounds to route
-function FitBounds({ positions }) {
-    const map = useMap();
-
-    useEffect(() => {
-        if (positions.length > 0) {
-            const bounds = positions.map((p) => [p.latitude, p.longitude]);
-            map.fitBounds(bounds, { padding: [50, 50], maxZoom: 16 });
-        }
-    }, [positions, map]);
-
-    return null;
-}
 
 // Format time
 function formatTime(dateStr) {
@@ -29,9 +14,45 @@ function formatTime(dateStr) {
     return new Date(dateStr).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 }
 
+const mapContainerStyle = {
+    height: '100%',
+    width: '100%'
+};
+
+// SVG icons for markers
+function createCircleIcon(color, size = 16) {
+    const svg = `
+        <svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="10" fill="${color}" fill-opacity="0.8" stroke="white" stroke-width="2"/>
+        </svg>
+    `.trim();
+
+    return {
+        url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`,
+        scaledSize: typeof window !== 'undefined' && window.google ? new window.google.maps.Size(size, size) : null,
+        anchor: typeof window !== 'undefined' && window.google ? new window.google.maps.Point(size / 2, size / 2) : null,
+    };
+}
+
 export default function HistoryMap({ positions, playbackIndex, isPlaying }) {
+    const { isLoaded } = useJsApiLoader({
+        id: 'google-map-script',
+        googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ''
+    });
+
+    const [map, setMap] = useState(null);
+    const [selectedMarker, setSelectedMarker] = useState(null); // 'start', 'end', or 'current'
+
+    const onLoad = useCallback(function callback(map) {
+        setMap(map);
+    }, []);
+
+    const onUnmount = useCallback(function callback(map) {
+        setMap(null);
+    }, []);
+
     const routeCoords = useMemo(
-        () => positions.map((p) => [p.latitude, p.longitude]),
+        () => positions.map((p) => ({ lat: p.latitude, lng: p.longitude })),
         [positions]
     );
 
@@ -44,6 +65,16 @@ export default function HistoryMap({ positions, playbackIndex, isPlaying }) {
     const currentPos = positions[playbackIndex] || null;
     const startPos = positions[0] || null;
     const endPos = positions[positions.length - 1] || null;
+
+    useEffect(() => {
+        if (map && positions.length > 0 && window.google) {
+            const bounds = new window.google.maps.LatLngBounds();
+            positions.forEach(p => {
+                bounds.extend({ lat: p.latitude, lng: p.longitude });
+            });
+            map.fitBounds(bounds, { bottom: 50, top: 50, left: 50, right: 50 });
+        }
+    }, [map, positions]);
 
     if (positions.length === 0) {
         return (
@@ -72,140 +103,149 @@ export default function HistoryMap({ positions, playbackIndex, isPlaying }) {
         );
     }
 
+    if (!isLoaded) {
+        return <div className="flex h-full w-full items-center justify-center bg-gray-50 text-gray-400">Loading Maps...</div>;
+    }
+
     return (
-        <MapContainer
-            center={[20.5937, 78.9629]}
+        <GoogleMap
+            mapContainerStyle={mapContainerStyle}
+            center={{ lat: 20.5937, lng: 78.9629 }}
             zoom={5}
-            style={{ height: '100%', width: '100%' }}
-            zoomControl={true}
+            onLoad={onLoad}
+            onUnmount={onUnmount}
+            options={{
+                mapTypeControl: false,
+                streetViewControl: false,
+                fullscreenControl: true,
+                zoomControl: true,
+            }}
         >
-            <TileLayer
-                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            />
-
-            <FitBounds positions={positions} />
-
             {/* Full route (gray) */}
             {routeCoords.length > 1 && (
-                <Polyline
-                    positions={routeCoords}
-                    pathOptions={{
-                        color: '#d1d5db',
-                        weight: 3,
-                        opacity: 0.6,
-                        dashArray: '8, 8',
+                <PolylineF
+                    path={routeCoords}
+                    options={{
+                        strokeColor: '#d1d5db',
+                        strokeOpacity: 0.6,
+                        strokeWeight: 3,
                     }}
                 />
             )}
 
             {/* Traveled route (blue) */}
             {traveledCoords.length > 1 && (
-                <Polyline
-                    positions={traveledCoords}
-                    pathOptions={{
-                        color: ROUTE_COLOR,
-                        weight: 4,
-                        opacity: 0.9,
+                <PolylineF
+                    path={traveledCoords}
+                    options={{
+                        strokeColor: ROUTE_COLOR,
+                        strokeOpacity: 0.9,
+                        strokeWeight: 4,
                     }}
                 />
             )}
 
             {/* Start marker */}
             {startPos && (
-                <CircleMarker
-                    center={[startPos.latitude, startPos.longitude]}
-                    radius={8}
-                    pathOptions={{
-                        color: START_COLOR,
-                        fillColor: START_COLOR,
-                        fillOpacity: 0.8,
-                        weight: 2,
-                    }}
+                <MarkerF
+                    position={{ lat: startPos.latitude, lng: startPos.longitude }}
+                    icon={createCircleIcon(START_COLOR, 16)}
+                    onClick={() => setSelectedMarker('start')}
+                    zIndex={800}
                 >
-                    <Popup>
-                        <div className="popup-content">
-                            <div className="popup-title" style={{ color: START_COLOR }}>▶ Start</div>
-                            <div className="popup-details">
-                                <div className="popup-row">
-                                    <span className="popup-row-label">Time</span>
-                                    <span className="popup-row-value">{formatTime(startPos.fixTime)}</span>
-                                </div>
-                                <div className="popup-row">
-                                    <span className="popup-row-label">Speed</span>
-                                    <span className="popup-row-value">{Math.round(startPos.speed * 1.852)} km/h</span>
+                    {selectedMarker === 'start' && (
+                        <InfoWindowF
+                            position={{ lat: startPos.latitude, lng: startPos.longitude }}
+                            onCloseClick={() => setSelectedMarker(null)}
+                            options={{ pixelOffset: new window.google.maps.Size(0, -8) }}
+                        >
+                            <div className="popup-content">
+                                <div className="popup-title" style={{ color: START_COLOR }}>▶ Start</div>
+                                <div className="popup-details">
+                                    <div className="popup-row">
+                                        <span className="popup-row-label">Time</span>
+                                        <span className="popup-row-value">{formatTime(startPos.fixTime)}</span>
+                                    </div>
+                                    <div className="popup-row">
+                                        <span className="popup-row-label">Speed</span>
+                                        <span className="popup-row-value">{Math.round(startPos.speed * 1.852)} km/h</span>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    </Popup>
-                </CircleMarker>
+                        </InfoWindowF>
+                    )}
+                </MarkerF>
             )}
 
             {/* End marker */}
             {endPos && positions.length > 1 && (
-                <CircleMarker
-                    center={[endPos.latitude, endPos.longitude]}
-                    radius={8}
-                    pathOptions={{
-                        color: END_COLOR,
-                        fillColor: END_COLOR,
-                        fillOpacity: 0.8,
-                        weight: 2,
-                    }}
+                <MarkerF
+                    position={{ lat: endPos.latitude, lng: endPos.longitude }}
+                    icon={createCircleIcon(END_COLOR, 16)}
+                    onClick={() => setSelectedMarker('end')}
+                    zIndex={800}
                 >
-                    <Popup>
-                        <div className="popup-content">
-                            <div className="popup-title" style={{ color: END_COLOR }}>■ End</div>
-                            <div className="popup-details">
-                                <div className="popup-row">
-                                    <span className="popup-row-label">Time</span>
-                                    <span className="popup-row-value">{formatTime(endPos.fixTime)}</span>
-                                </div>
-                                <div className="popup-row">
-                                    <span className="popup-row-label">Speed</span>
-                                    <span className="popup-row-value">{Math.round(endPos.speed * 1.852)} km/h</span>
+                    {selectedMarker === 'end' && (
+                        <InfoWindowF
+                            position={{ lat: endPos.latitude, lng: endPos.longitude }}
+                            onCloseClick={() => setSelectedMarker(null)}
+                            options={{ pixelOffset: new window.google.maps.Size(0, -8) }}
+                        >
+                            <div className="popup-content">
+                                <div className="popup-title" style={{ color: END_COLOR }}>■ End</div>
+                                <div className="popup-details">
+                                    <div className="popup-row">
+                                        <span className="popup-row-label">Time</span>
+                                        <span className="popup-row-value">{formatTime(endPos.fixTime)}</span>
+                                    </div>
+                                    <div className="popup-row">
+                                        <span className="popup-row-label">Speed</span>
+                                        <span className="popup-row-value">{Math.round(endPos.speed * 1.852)} km/h</span>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    </Popup>
-                </CircleMarker>
+                        </InfoWindowF>
+                    )}
+                </MarkerF>
             )}
 
             {/* Current playback marker */}
             {currentPos && (
-                <CircleMarker
-                    center={[currentPos.latitude, currentPos.longitude]}
-                    radius={10}
-                    pathOptions={{
-                        color: MARKER_COLOR,
-                        fillColor: MARKER_COLOR,
-                        fillOpacity: 0.9,
-                        weight: 3,
-                    }}
+                <MarkerF
+                    position={{ lat: currentPos.latitude, lng: currentPos.longitude }}
+                    icon={createCircleIcon(MARKER_COLOR, 20)}
+                    onClick={() => setSelectedMarker('current')}
+                    zIndex={900}
                 >
-                    <Popup>
-                        <div className="popup-content">
-                            <div className="popup-title">Current Position</div>
-                            <div className="popup-details">
-                                <div className="popup-row">
-                                    <span className="popup-row-label">Time</span>
-                                    <span className="popup-row-value">{formatTime(currentPos.fixTime)}</span>
-                                </div>
-                                <div className="popup-row">
-                                    <span className="popup-row-label">Speed</span>
-                                    <span className="popup-row-value">{Math.round(currentPos.speed * 1.852)} km/h</span>
-                                </div>
-                                <div className="popup-row">
-                                    <span className="popup-row-label">Coords</span>
-                                    <span className="popup-row-value" style={{ fontSize: '0.75rem' }}>
-                                        {currentPos.latitude.toFixed(5)}, {currentPos.longitude.toFixed(5)}
-                                    </span>
+                    {selectedMarker === 'current' && (
+                        <InfoWindowF
+                            position={{ lat: currentPos.latitude, lng: currentPos.longitude }}
+                            onCloseClick={() => setSelectedMarker(null)}
+                            options={{ pixelOffset: new window.google.maps.Size(0, -10) }}
+                        >
+                            <div className="popup-content">
+                                <div className="popup-title">Current Position</div>
+                                <div className="popup-details">
+                                    <div className="popup-row">
+                                        <span className="popup-row-label">Time</span>
+                                        <span className="popup-row-value">{formatTime(currentPos.fixTime)}</span>
+                                    </div>
+                                    <div className="popup-row">
+                                        <span className="popup-row-label">Speed</span>
+                                        <span className="popup-row-value">{Math.round(currentPos.speed * 1.852)} km/h</span>
+                                    </div>
+                                    <div className="popup-row">
+                                        <span className="popup-row-label">Coords</span>
+                                        <span className="popup-row-value" style={{ fontSize: '0.75rem' }}>
+                                            {currentPos.latitude.toFixed(5)}, {currentPos.longitude.toFixed(5)}
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    </Popup>
-                </CircleMarker>
+                        </InfoWindowF>
+                    )}
+                </MarkerF>
             )}
-        </MapContainer>
+        </GoogleMap>
     );
 }
