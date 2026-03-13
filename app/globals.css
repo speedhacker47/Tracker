@@ -1560,6 +1560,25 @@ body {
     }
   }
 
+  @keyframes alarm-pulse {
+
+    0%,
+    100% {
+      opacity: 1;
+    }
+
+    50% {
+      opacity: 0.6;
+    }
+  }
+
+  /* Subtle row highlight for expanded table rows */
+  :root {
+    --gray-25: #fcfcfd;
+    --primary-25: #f5f8ff;
+  }
+
+
   @media (max-width: 768px) {
     .top-nav-links span {
       display: none;

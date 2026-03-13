@@ -8,7 +8,6 @@ import { apiFetch } from '@/lib/api';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 
-// Dynamically import Map with no SSR (Leaflet breaks on server)
 const MapComponent = dynamic(() => import('@/components/Map'), {
     ssr: false,
     loading: () => (
@@ -19,7 +18,77 @@ const MapComponent = dynamic(() => import('@/components/Map'), {
     ),
 });
 
-const REFRESH_INTERVAL = 10000; // 10 seconds
+const REFRESH_INTERVAL = 10000;
+
+// ── Small helper components ─────────────────────────────────────────────────
+
+/** Ignition indicator: green key = on, gray = off, nothing if unknown */
+function IgnitionBadge({ ignition }) {
+    if (ignition === null || ignition === undefined) return null;
+    const on = ignition === true || ignition === 'true';
+    return (
+        <span title={on ? 'Engine on' : 'Engine off'} style={{
+            display: 'inline-flex', alignItems: 'center', gap: '0.2rem',
+            fontSize: '0.65rem', fontWeight: 600,
+            color: on ? 'var(--success-600)' : 'var(--gray-400)',
+        }}>
+            {/* Key icon */}
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="7.5" cy="15.5" r="5.5" />
+                <path d="M21 2l-9.6 9.6" />
+                <path d="M15.5 7.5l3 3L22 7l-3-3" />
+            </svg>
+            {on ? 'ON' : 'OFF'}
+        </span>
+    );
+}
+
+/** Battery level bar — shows % with colour coding */
+function BatteryBadge({ level }) {
+    if (level === null || level === undefined) return null;
+    const pct = Math.round(level);
+    const color = pct > 60 ? 'var(--success-500)' : pct > 20 ? 'var(--warning-500)' : 'var(--danger-500)';
+    return (
+        <span title={`Battery ${pct}%`} style={{
+            display: 'inline-flex', alignItems: 'center', gap: '0.25rem',
+            fontSize: '0.65rem', fontWeight: 600, color,
+        }}>
+            <svg width="12" height="10" viewBox="0 0 24 18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="1" y="3" width="18" height="12" rx="2" />
+                <path d="M19 8h2a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1h-2" />
+                <rect x="3" y="5" width={Math.max(1, Math.round(pct / 100 * 14))} height="8" rx="1" fill="currentColor" stroke="none" />
+            </svg>
+            {pct}%
+        </span>
+    );
+}
+
+/** Alarm badge — only shows when there is an active alarm */
+function AlarmBadge({ alarm }) {
+    if (!alarm) return null;
+    const labels = {
+        sos: 'SOS', panic: 'SOS', overspeed: 'Speed', geofenceEnter: 'Geo In',
+        geofenceExit: 'Geo Out', powerCut: 'Power', lowBattery: 'Low Bat',
+        vibration: 'Vibrate', accident: 'Accident',
+    };
+    const label = labels[alarm] || alarm;
+    return (
+        <span title={`Alarm: ${alarm}`} style={{
+            display: 'inline-flex', alignItems: 'center', gap: '0.2rem',
+            fontSize: '0.65rem', fontWeight: 700,
+            color: 'var(--danger-600)',
+            background: 'var(--danger-50)',
+            padding: '0.1rem 0.35rem',
+            borderRadius: '4px',
+            border: '1px solid var(--danger-200)',
+            animation: 'alarm-pulse 1.5s ease-in-out infinite',
+        }}>
+            ⚠ {label}
+        </span>
+    );
+}
+
+// ── Main page ───────────────────────────────────────────────────────────────
 
 export default function DashboardPage() {
     const router = useRouter();
@@ -32,14 +101,6 @@ export default function DashboardPage() {
     const [selectedVehicle, setSelectedVehicle] = useState(null);
     const [lastUpdate, setLastUpdate] = useState(null);
     const intervalRef = useRef(null);
-
-    const getUserFromCookie = () => {
-        // User info is now managed via Firebase auth state
-        // Cookie-based user info is no longer used
-        return null;
-    };
-
-    const user = getUserFromCookie();
 
     const getVehicleStatus = useCallback((device, position) => {
         const traccarStatus = (device.status || '').toLowerCase();
@@ -59,21 +120,48 @@ export default function DashboardPage() {
         return devices.map((device) => {
             const position = positionList.find((p) => p.deviceId === device.id) || null;
             const status = getVehicleStatus(device, position);
+            const attrs = position?.attributes || {};
             return {
                 id: device.id,
                 name: device.name || `Device ${device.id}`,
                 uniqueId: device.uniqueId,
                 status,
                 lastUpdate: device.lastUpdate || null,
+                // Device-level fields
+                phone: device.phone || null,
+                model: device.model || null,
+                category: device.category || null,
+                contact: device.contact || null,
+                // Position
                 position: position ? {
                     latitude: position.latitude,
                     longitude: position.longitude,
                     speed: position.speed || 0,
                     course: position.course || 0,
+                    altitude: position.altitude || 0,
                     fixTime: position.fixTime,
                     serverTime: position.serverTime || null,
                     address: position.address || null,
+                    valid: position.valid ?? true,
+                    protocol: position.protocol || null,
                 } : null,
+                // Attributes from position (the key new data)
+                attrs: {
+                    ignition: attrs.ignition ?? null,
+                    motion: attrs.motion ?? null,
+                    batteryLevel: attrs.batteryLevel ?? null,
+                    battery: attrs.battery ?? null,
+                    charge: attrs.charge ?? null,
+                    alarm: attrs.alarm ?? null,
+                    sat: attrs.sat ?? null,
+                    odometer: attrs.odometer ?? null,
+                    hours: attrs.hours ?? null,
+                    rpm: attrs.rpm ?? null,
+                    fuel: attrs.fuel ?? null,
+                    temperature: attrs.temperature ?? null,
+                    input1: attrs.input1 ?? null,
+                    input2: attrs.input2 ?? null,
+                },
             };
         });
     }, [getVehicleStatus]);
@@ -82,7 +170,6 @@ export default function DashboardPage() {
         try {
             if (!isInitial) setRefreshing(true);
 
-            // Wait for Firebase auth state
             const user = await new Promise((resolve) => {
                 const unsubscribe = onAuthStateChanged(auth, (u) => {
                     unsubscribe();
@@ -92,17 +179,12 @@ export default function DashboardPage() {
 
             if (!user) { router.push('/login'); return; }
 
-            const headers = {};
             const [devicesRes, positionsRes] = await Promise.all([
-                apiFetch('/api/devices', { headers }),
-                apiFetch('/api/positions', { headers }),
+                apiFetch('/api/devices'),
+                apiFetch('/api/positions'),
             ]);
 
             if (devicesRes.status === 401 || positionsRes.status === 401) {
-                const errBody = devicesRes.status === 401
-                    ? await devicesRes.json().catch(() => ({}))
-                    : await positionsRes.json().catch(() => ({}));
-                console.error('[Dashboard] 401 Unauthorized:', errBody);
                 router.push('/login');
                 return;
             }
@@ -180,7 +262,6 @@ export default function DashboardPage() {
         <div className="dashboard-shell">
             <NavBar />
 
-            {/* Map fills the right area */}
             <div className="dashboard-map-area">
                 <MapComponent
                     vehicles={sortedVehicles}
@@ -190,6 +271,7 @@ export default function DashboardPage() {
 
                 {/* ===== Floating Left Panels ===== */}
                 <div className="dashboard-float-left">
+
                     {/* Stats card */}
                     <div className="float-stats-card">
                         <div className="float-stat">
@@ -229,7 +311,7 @@ export default function DashboardPage() {
                                 id="vehicle-search"
                                 type="text"
                                 className="float-search-input"
-                                placeholder="Search vehicles....."
+                                placeholder="Search vehicles..."
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
                             />
@@ -271,9 +353,11 @@ export default function DashboardPage() {
                                                 <circle cx="18.5" cy="18.5" r="2.5" />
                                             </svg>
                                         </div>
-                                        <div className="vehicle-info">
+
+                                        <div className="vehicle-info" style={{ flex: 1, minWidth: 0 }}>
                                             <div className="float-vehicle-name">{vehicle.name}</div>
-                                            <div className="vehicle-number">{vehicle.uniqueId}</div>
+
+                                            {/* Speed + time row */}
                                             <div className="vehicle-meta">
                                                 {vehicle.position && (
                                                     <span className="vehicle-speed">
@@ -284,10 +368,29 @@ export default function DashboardPage() {
                                                     </span>
                                                 )}
                                                 <span className="vehicle-time">
-                                                    {vehicle.position ? formatTimeAgo(vehicle.position.fixTime) : 'No data'}
+                                                    {vehicle.position
+                                                        ? formatTimeAgo(vehicle.position.fixTime)
+                                                        : 'No data'}
                                                 </span>
                                             </div>
+
+                                            {/* ── Attribute badges row ── */}
+                                            {(vehicle.attrs.ignition !== null ||
+                                                vehicle.attrs.batteryLevel !== null ||
+                                                vehicle.attrs.alarm) && (
+                                                    <div style={{
+                                                        display: 'flex', alignItems: 'center',
+                                                        gap: '0.375rem', marginTop: '0.3rem',
+                                                        flexWrap: 'wrap',
+                                                    }}>
+                                                        <IgnitionBadge ignition={vehicle.attrs.ignition} />
+                                                        <BatteryBadge level={vehicle.attrs.batteryLevel} />
+                                                        <AlarmBadge alarm={vehicle.attrs.alarm} />
+                                                    </div>
+                                                )}
                                         </div>
+
+                                        {/* Status pill */}
                                         <div className="float-vehicle-status">
                                             <span className={`float-status-dot float-status-${vehicle.status}`} />
                                             <span className={`float-status-label float-status-label-${vehicle.status}`}>
@@ -301,7 +404,7 @@ export default function DashboardPage() {
                     </div>
                 </div>
 
-                {/* ===== Top-right sync indicator ===== */}
+                {/* Top-right sync indicator */}
                 <div className={`refresh-indicator ${refreshing ? 'refreshing' : ''}`}>
                     <div className={`refresh-dot ${refreshing ? 'refreshing' : ''}`} />
                     {refreshing ? 'Updating...' : lastUpdate ? `Last sync: ${lastUpdate.toLocaleTimeString()}` : 'Loading...'}
