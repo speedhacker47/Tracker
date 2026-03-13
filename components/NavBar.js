@@ -19,6 +19,18 @@ const NAV_ITEMS = [
         ),
     },
     {
+        label: 'Vehicles',
+        href: '/vehicles',
+        icon: (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="1" y="3" width="15" height="13" rx="2" />
+                <polygon points="16 8 20 8 23 11 23 16 16 16 16 8" />
+                <circle cx="5.5" cy="18.5" r="2.5" />
+                <circle cx="18.5" cy="18.5" r="2.5" />
+            </svg>
+        ),
+    },
+    {
         label: 'Route History',
         href: '/history',
         icon: (
@@ -28,14 +40,43 @@ const NAV_ITEMS = [
         ),
     },
     {
-        label: 'Vehicles',
-        href: '/vehicles',
+        label: 'Reports',
+        href: '/reports',
         icon: (
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="1" y="3" width="15" height="13" rx="2" />
-                <polygon points="16 8 20 8 23 11 23 16 16 16 16 8" />
-                <circle cx="5.5" cy="18.5" r="2.5" />
-                <circle cx="18.5" cy="18.5" r="2.5" />
+                <line x1="18" y1="20" x2="18" y2="10" />
+                <line x1="12" y1="20" x2="12" y2="4" />
+                <line x1="6" y1="20" x2="6" y2="14" />
+            </svg>
+        ),
+    },
+    {
+        label: 'Alerts',
+        href: '/alerts',
+        icon: (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+            </svg>
+        ),
+    },
+    {
+        label: 'Geofences',
+        href: '/geofences',
+        icon: (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 22s-8-4.5-8-11.8A8 8 0 0 1 12 2a8 8 0 0 1 8 8.2c0 7.3-8 11.8-8 11.8z" />
+                <circle cx="12" cy="10" r="3" />
+            </svg>
+        ),
+    },
+    {
+        label: 'Account',
+        href: '/account',
+        icon: (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                <circle cx="12" cy="7" r="4" />
             </svg>
         ),
     },
@@ -74,7 +115,7 @@ export default function NavBar() {
                         key={item.href}
                         href={item.href}
                         title={item.label}
-                        className={`icon-nav-link ${pathname === item.href ? 'active' : ''}`}
+                        className={`icon-nav-link${pathname === item.href ? ' active' : ''}`}
                         onClick={(e) => {
                             e.preventDefault();
                             router.push(item.href);
