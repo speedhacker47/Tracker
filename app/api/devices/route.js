@@ -1,62 +1,55 @@
 import { NextResponse } from 'next/server';
 import { verifyFirebaseToken } from '@/lib/firebase-admin';
 import { query } from '@/lib/db';
-import { getDevices } from '@/lib/traccar';
+import { redis } from '@/lib/redis';
 
-/**
- * GET /api/devices
- *
- * Returns the logged-in client's assigned devices from Traccar,
- * enriched with custom vehicle names/numbers from client_devices table.
- */
 export async function GET(request) {
     try {
-        // ── Auth (Firebase) ──
         let decodedToken;
         try {
             decodedToken = await verifyFirebaseToken(request);
         } catch (authErr) {
-            return NextResponse.json(
-                { error: authErr.message },
-                { status: authErr.status || 401 }
-            );
+            return NextResponse.json({ error: authErr.message }, { status: authErr.status || 401 });
         }
 
-        // ── Get client's assigned device IDs ──
+        // Get client's device mapping from DB
         const result = await query(
             'SELECT traccar_device_id, vehicle_name, vehicle_number FROM client_devices WHERE firebase_uid = $1',
             [decodedToken.uid]
         );
 
-        const clientDeviceMap = new Map();
+        if (result.rows.length === 0) return NextResponse.json([]);
+
+        const clientDeviceIds = new Set(result.rows.map(r => Number(r.traccar_device_id)));
+
+        // Custom names map: traccar_id → {vehicle_name, vehicle_number}
+        const nameMap = {};
         for (const row of result.rows) {
-            clientDeviceMap.set(Number(row.traccar_device_id), {
-                vehicleName: row.vehicle_name,
-                vehicleNumber: row.vehicle_number,
-            });
+            nameMap[Number(row.traccar_device_id)] = {
+                vehicle_name: row.vehicle_name,
+                vehicle_number: row.vehicle_number,
+            };
         }
 
-        // ── Fetch all devices from Traccar ──
-        const allDevices = await getDevices();
+        // Read all devices from Redis — written by sync worker every 30s
+        const cached = await redis.get('trackpro:devices');
+        if (!cached) return NextResponse.json([]);
 
-        // ── Filter to only client's devices and enrich with custom names ──
+        const allDevices = JSON.parse(cached);
+
+        // Filter to client's devices + apply custom names
         const clientDevices = allDevices
-            .filter((device) => clientDeviceMap.has(device.id))
-            .map((device) => {
-                const mapping = clientDeviceMap.get(device.id);
-                return {
-                    ...device,
-                    name: mapping.vehicleName || device.name,
-                    vehicleNumber: mapping.vehicleNumber || device.uniqueId,
-                };
-            });
+            .filter(d => clientDeviceIds.has(d.id))
+            .map(d => ({
+                ...d,
+                name: nameMap[d.id]?.vehicle_name || d.name,
+                vehicleNumber: nameMap[d.id]?.vehicle_number || null,
+            }));
 
         return NextResponse.json(clientDevices);
+
     } catch (err) {
         console.error('[Devices] Error:', err.message);
-        return NextResponse.json(
-            { error: 'Failed to fetch devices' },
-            { status: 500 }
-        );
+        return NextResponse.json({ error: 'Failed to fetch devices' }, { status: 500 });
     }
 }
