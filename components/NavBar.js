@@ -84,7 +84,7 @@ const NAV_ITEMS = [
 ];
 
 const COLLAPSED_W = 54;
-const EXPANDED_W = 160;
+const EXPANDED_W = 230;
 const LS_KEY = 'trackpro_nav_expanded';
 const LS_THEME = 'trackpro_theme';
 
@@ -163,7 +163,7 @@ export default function NavBar() {
 
             {/* Logo */}
             <div style={{
-                height: 54, minHeight: 54,
+                height: 60, minHeight: 60,
                 display: 'flex', alignItems: 'center',
                 padding: '0 14px',
                 flexShrink: 0,
@@ -181,7 +181,7 @@ export default function NavBar() {
                     </svg>
                 </div>
                 <span style={{
-                    fontSize: '0.9375rem', fontWeight: 500, color: 'var(--nav-text)',
+                    fontSize: '1.5rem', fontWeight: 500, color: 'var(--nav-text)',
                     letterSpacing: '-0.01em', whiteSpace: 'nowrap',
                     opacity: expanded ? 1 : 0,
                     transform: expanded ? 'translateX(0)' : 'translateX(-8px)',
@@ -205,7 +205,7 @@ export default function NavBar() {
                             style={{
                                 display: 'flex',
                                 alignItems: 'center',
-                                height: 38,
+                                height: 50,
                                 borderRadius: '0 20px 20px 0',
                                 margin: '0 8px 0 0',
                                 paddingLeft: 14,
@@ -239,7 +239,7 @@ export default function NavBar() {
                                 {item.icon}
                             </span>
                             <span style={{
-                                fontSize: '0.8125rem',
+                                fontSize: '0.9rem',
                                 fontWeight: active ? 500 : 400,
                                 opacity: expanded ? 1 : 0,
                                 transform: expanded ? 'translateX(0)' : 'translateX(-6px)',
@@ -255,7 +255,7 @@ export default function NavBar() {
             </div>
 
             {/* Bottom: logout + dark toggle + collapse */}
-            <div style={{ padding: '0.5rem 0', borderTop: '1px solid var(--nav-border)', display: 'flex', flexDirection: 'column', gap: '2px', flexShrink: 0 }}>
+            <div style={{ padding: '0.5rem 0', borderTop: '1px solid var(--nav-border)', display: 'flex', flexDirection: 'column', gap: '5px', flexShrink: 0 }}>
 
                 {/* Logout */}
                 <button
@@ -281,7 +281,7 @@ export default function NavBar() {
                         </svg>
                     </span>
                     <span style={{
-                        fontSize: '0.8125rem', fontWeight: 400,
+                        fontSize: '0.9rem', fontWeight: 400,
                         opacity: expanded ? 1 : 0,
                         transform: expanded ? 'translateX(0)' : 'translateX(-6px)',
                         transition: 'opacity 0.16s ease, transform 0.16s ease',
@@ -322,7 +322,7 @@ export default function NavBar() {
                         transition: 'opacity 0.16s ease, transform 0.16s ease',
                         pointerEvents: 'none', whiteSpace: 'nowrap', flex: 1,
                     }}>
-                        <span style={{ fontSize: '0.8125rem', fontWeight: 400 }}>
+                        <span style={{ fontSize: '0.9rem', fontWeight: 400 }}>
                             {dark ? 'Dark' : 'Light'}
                         </span>
                         {/* Switch pill */}
@@ -371,7 +371,7 @@ export default function NavBar() {
                         </svg>
                     </span>
                     <span style={{
-                        fontSize: '0.8125rem', fontWeight: 400,
+                        fontSize: '0.9rem', fontWeight: 400,
                         opacity: expanded ? 1 : 0,
                         transform: expanded ? 'translateX(0)' : 'translateX(-6px)',
                         transition: 'opacity 0.16s ease, transform 0.16s ease',
