@@ -83,16 +83,9 @@ export default function ClaimPage() {
 
                 {/* Header */}
                 <div style={{ background: 'white', borderBottom: '1px solid var(--gray-200)', padding: '0 1.75rem', minHeight: 64, display: 'flex', alignItems: 'center', gap: '0.875rem' }}>
-                    <div style={{ width: 38, height: 38, borderRadius: 'var(--radius-md)', background: 'linear-gradient(135deg, #1e3a5f, #2563eb)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                            <rect x="1" y="3" width="15" height="13" rx="2" />
-                            <polygon points="16 8 20 8 23 11 23 16 16 16 16 8" />
-                            <circle cx="5.5" cy="18.5" r="2.5" /><circle cx="18.5" cy="18.5" r="2.5" />
-                        </svg>
-                    </div>
-                    <div>
-                        <h1 style={{ fontSize: '1.0625rem', fontWeight: 700, color: 'var(--gray-900)', lineHeight: 1.2 }}>Add Device</h1>
-                        <p style={{ fontSize: '0.75rem', color: 'var(--gray-400)' }}>Register your GPS tracker using its IMEI number</p>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
+                        <h1 style={{ fontSize: '1.125rem', fontWeight: 400, color: 'var(--gray-800)', margin: 0 }}>Add Device</h1>
+                        <span style={{ fontSize: '0.8125rem', color: 'var(--gray-500)' }}>Register your GPS tracker</span>
                     </div>
                 </div>
 
@@ -122,10 +115,10 @@ export default function ClaimPage() {
                                 <div style={{ fontSize: '1.125rem', fontWeight: 800, color: 'var(--gray-900)', marginBottom: '0.375rem' }}>Device Added! 🎉</div>
                                 <div style={{ fontSize: '0.875rem', color: 'var(--gray-500)', marginBottom: '1.25rem' }}>{success.message}</div>
                                 <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
-                                    <button onClick={() => router.push('/dashboard')} style={{ height: 40, padding: '0 1.25rem', background: 'linear-gradient(135deg, #1e3a5f, #2563eb)', color: 'white', border: 'none', borderRadius: 8, fontSize: '0.875rem', fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>
-                                        Go to Dashboard →
+                                    <button onClick={() => router.push('/dashboard')} style={{ height: 40, padding: '0 1.25rem', background: 'var(--primary-500)', color: 'white', border: 'none', borderRadius: 'var(--radius-sm)', fontSize: '0.875rem', fontWeight: 500, fontFamily: 'inherit', cursor: 'pointer' }}>
+                                        Go to Dashboard
                                     </button>
-                                    <button onClick={() => setSuccess(null)} style={{ height: 40, padding: '0 1.25rem', background: 'white', color: 'var(--gray-600)', border: '1px solid var(--gray-200)', borderRadius: 8, fontSize: '0.875rem', fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer' }}>
+                                    <button onClick={() => setSuccess(null)} style={{ height: 40, padding: '0 1.25rem', background: 'white', color: 'var(--gray-700)', border: '1px solid var(--gray-300)', borderRadius: 'var(--radius-sm)', fontSize: '0.875rem', fontWeight: 400, fontFamily: 'inherit', cursor: 'pointer' }}>
                                         Add Another
                                     </button>
                                 </div>
@@ -171,9 +164,9 @@ export default function ClaimPage() {
                                     </div>
 
                                     <button type="submit" disabled={loading} style={{
-                                        height: 48, background: loading ? 'var(--gray-200)' : 'linear-gradient(135deg, #1e3a5f, #2563eb)',
-                                        color: loading ? 'var(--gray-400)' : 'white', border: 'none', borderRadius: 10,
-                                        fontSize: '0.9375rem', fontWeight: 700, fontFamily: 'inherit',
+                                        height: 42, background: loading ? 'var(--gray-200)' : 'var(--primary-500)',
+                                        color: loading ? 'var(--gray-500)' : 'white', border: 'none', borderRadius: 'var(--radius-sm)',
+                                        fontSize: '0.875rem', fontWeight: 500, fontFamily: 'inherit',
                                         cursor: loading ? 'not-allowed' : 'pointer',
                                         display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
                                     }}>

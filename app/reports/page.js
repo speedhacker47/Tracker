@@ -38,19 +38,18 @@ function StatCard({ label, value, sub, icon, color }) {
     return (
         <div style={{
             background: 'white', border: '1px solid var(--gray-200)',
-            borderRadius: 'var(--radius-xl)', padding: '1.125rem 1.25rem',
+            borderRadius: 'var(--radius-md)', padding: '1rem 1.25rem',
             display: 'flex', alignItems: 'flex-start', gap: '0.875rem',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
         }}>
             <div style={{
-                width: 40, height: 40, borderRadius: 'var(--radius-md)',
-                background: `${color}18`, display: 'flex', alignItems: 'center',
-                justifyContent: 'center', flexShrink: 0, color,
+                width: 38, height: 38, borderRadius: 'var(--radius-sm)',
+                background: 'var(--primary-50)', display: 'flex', alignItems: 'center',
+                justifyContent: 'center', flexShrink: 0, color: 'var(--primary-500)',
             }}>{icon}</div>
             <div style={{ minWidth: 0 }}>
-                <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--gray-900)', lineHeight: 1, letterSpacing: '-0.025em' }}>{value}</div>
-                <div style={{ fontSize: '0.8125rem', fontWeight: 500, color: 'var(--gray-500)', marginTop: '0.25rem' }}>{label}</div>
-                {sub && <div style={{ fontSize: '0.75rem', color: 'var(--gray-400)', marginTop: '0.125rem' }}>{sub}</div>}
+                <div style={{ fontSize: '1.25rem', fontWeight: 400, color: 'var(--gray-800)', lineHeight: 1, letterSpacing: '-0.02em' }}>{value}</div>
+                <div style={{ fontSize: '0.8125rem', fontWeight: 400, color: 'var(--gray-600)', marginTop: '0.25rem' }}>{label}</div>
+                {sub && <div style={{ fontSize: '0.75rem', color: 'var(--gray-500)', marginTop: '0.125rem' }}>{sub}</div>}
             </div>
         </div>
     );
@@ -61,12 +60,12 @@ function EmptyState({ icon, title, subtitle }) {
         <div style={{
             display: 'flex', flexDirection: 'column', alignItems: 'center',
             justifyContent: 'center', padding: '4rem 2rem', gap: '0.75rem',
-            background: 'var(--gray-50)', borderRadius: 'var(--radius-xl)',
-            border: '1.5px dashed var(--gray-200)',
+            background: 'var(--gray-50)', borderRadius: 'var(--radius-md)',
+            border: '1px solid var(--gray-200)',
         }}>
-            <div style={{ color: 'var(--gray-300)', marginBottom: '0.25rem' }}>{icon}</div>
-            <div style={{ fontSize: '0.9375rem', fontWeight: 600, color: 'var(--gray-500)' }}>{title}</div>
-            {subtitle && <div style={{ fontSize: '0.8125rem', color: 'var(--gray-400)' }}>{subtitle}</div>}
+            <div style={{ color: 'var(--gray-400)', marginBottom: '0.25rem' }}>{icon}</div>
+            <div style={{ fontSize: '0.9375rem', fontWeight: 400, color: 'var(--gray-600)' }}>{title}</div>
+            {subtitle && <div style={{ fontSize: '0.8125rem', color: 'var(--gray-500)' }}>{subtitle}</div>}
         </div>
     );
 }
@@ -180,21 +179,9 @@ export default function ReportsPage() {
                     gap: '1rem', flexWrap: 'wrap',
                 }}>
                     {/* Title */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem' }}>
-                        <div style={{
-                            width: 38, height: 38, borderRadius: 'var(--radius-md)',
-                            background: 'linear-gradient(135deg, #7c3aed, #a855f7)',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            boxShadow: '0 2px 8px rgba(124,58,237,0.3)',
-                        }}>
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                <line x1="18" y1="20" x2="18" y2="10" /><line x1="12" y1="20" x2="12" y2="4" /><line x1="6" y1="20" x2="6" y2="14" />
-                            </svg>
-                        </div>
-                        <div>
-                            <h1 style={{ fontSize: '1.0625rem', fontWeight: 700, color: 'var(--gray-900)', lineHeight: 1.2 }}>Reports</h1>
-                            <p style={{ fontSize: '0.75rem', color: 'var(--gray-400)' }}>Trips · Stops · Fleet analytics</p>
-                        </div>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
+                        <h1 style={{ fontSize: '1.125rem', fontWeight: 400, color: 'var(--gray-800)', margin: 0 }}>Reports</h1>
+                        <span style={{ fontSize: '0.8125rem', color: 'var(--gray-500)' }}>Trips · Stops · Summary</span>
                     </div>
 
                     {/* Controls */}
@@ -236,15 +223,17 @@ export default function ReportsPage() {
                         {/* Run */}
                         <button onClick={runReport} disabled={loading || !selectedDevice || devicesLoading}
                             style={{
-                                height: 34, padding: '0 1.125rem', fontSize: '0.8125rem', fontWeight: 600,
-                                fontFamily: 'var(--font-sans)', border: 'none', borderRadius: 'var(--radius-md)',
-                                background: loading ? 'var(--gray-200)' : 'linear-gradient(135deg, #7c3aed, #a855f7)',
-                                color: loading ? 'var(--gray-400)' : 'white',
+                                height: 34, padding: '0 1.125rem', fontSize: '0.875rem', fontWeight: 500,
+                                fontFamily: 'var(--font-sans)', border: 'none', borderRadius: 'var(--radius-sm)',
+                                background: loading ? 'var(--gray-200)' : 'var(--primary-500)',
+                                color: loading ? 'var(--gray-500)' : 'white',
                                 cursor: loading ? 'not-allowed' : 'pointer',
                                 display: 'flex', alignItems: 'center', gap: '0.375rem',
-                                boxShadow: loading ? 'none' : '0 2px 6px rgba(124,58,237,0.3)',
-                                transition: 'all 0.15s',
-                            }}>
+                                transition: 'background var(--transition-fast)',
+                            }}
+                            onMouseEnter={e => { if (!loading && selectedDevice) e.currentTarget.style.background = 'var(--primary-600)'; }}
+                            onMouseLeave={e => { if (!loading) e.currentTarget.style.background = loading ? 'var(--gray-200)' : 'var(--primary-500)'; }}
+                        >
                             {loading
                                 ? <><div className="map-loading-spinner" style={{ width: 13, height: 13, borderWidth: 2 }} />Loading…</>
                                 : <><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3" /></svg>Run Report</>
@@ -298,27 +287,22 @@ export default function ReportsPage() {
                                     icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 22V8l9-6 9 6v14H3z" /><path d="M9 22V12h6v10" /></svg>} />
                             </div>
 
-                            {/* Tabs */}
-                            <div style={{ display: 'flex', gap: '0.25rem', background: 'white', border: '1px solid var(--gray-200)', borderRadius: 'var(--radius-lg)', padding: '0.25rem', width: 'fit-content', marginBottom: '1.25rem' }}>
+                            <div style={{ display: 'flex', gap: '0', marginBottom: '1.25rem', borderBottom: '1px solid var(--gray-200)' }}>
                                 {TABS.map(tab => (
                                     <button key={tab.key} onClick={() => setActiveTab(tab.key)}
                                         style={{
-                                            padding: '0.4375rem 1rem', fontSize: '0.8125rem', fontWeight: 600,
-                                            fontFamily: 'var(--font-sans)', border: 'none',
-                                            borderRadius: 'calc(var(--radius-lg) - 2px)',
-                                            cursor: 'pointer', transition: 'all 0.15s',
-                                            background: activeTab === tab.key ? '#7c3aed' : 'transparent',
-                                            color: activeTab === tab.key ? 'white' : 'var(--gray-500)',
-                                            display: 'flex', alignItems: 'center', gap: '0.375rem',
+                                            padding: '8px 16px', fontSize: '0.8125rem', fontWeight: activeTab === tab.key ? 500 : 400,
+                                            fontFamily: 'var(--font-sans)', border: 'none', background: 'transparent',
+                                            color: activeTab === tab.key ? 'var(--primary-500)' : 'var(--gray-700)',
+                                            borderBottom: activeTab === tab.key ? '2px solid var(--primary-500)' : '2px solid transparent',
+                                            cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.375rem',
+                                            marginBottom: -1,
                                         }}>
                                         {tab.label}
                                         {tab.count !== null && (
                                             <span style={{
-                                                fontSize: '0.6875rem', fontWeight: 700, padding: '0 5px',
-                                                minWidth: 18, height: 17, borderRadius: 9,
-                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                background: activeTab === tab.key ? 'rgba(255,255,255,0.22)' : 'var(--gray-100)',
-                                                color: activeTab === tab.key ? 'white' : 'var(--gray-500)',
+                                                fontSize: '0.75rem', fontWeight: 400,
+                                                color: activeTab === tab.key ? 'var(--primary-500)' : 'var(--gray-500)',
                                             }}>{tab.count}</span>
                                         )}
                                     </button>
@@ -471,11 +455,10 @@ export default function ReportsPage() {
                                             <div key={label} style={{
                                                 display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                                                 padding: '0.875rem 1.5rem',
-                                                borderBottom: i < arr.length - 1 ? '1px solid var(--gray-100)' : 'none',
-                                                background: i % 2 === 1 ? '#fcfcfd' : 'white',
+                                                borderBottom: i < arr.length - 1 ? '1px solid var(--gray-200)' : 'none',
                                             }}>
-                                                <span style={{ fontSize: '0.875rem', color: 'var(--gray-500)' }}>{label}</span>
-                                                <span style={{ fontSize: '0.9375rem', fontWeight: 700, color: 'var(--gray-900)' }}>{value}</span>
+                                                <span style={{ fontSize: '0.875rem', color: 'var(--gray-600)' }}>{label}</span>
+                                                <span style={{ fontSize: '0.9375rem', fontWeight: 500, color: 'var(--gray-800)' }}>{value}</span>
                                             </div>
                                         ))}
                                     </div>

@@ -292,24 +292,11 @@ export default function AlertsPage() {
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                     gap: '1rem', flexWrap: 'wrap',
                 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem' }}>
-                        <div style={{
-                            width: 38, height: 38, borderRadius: 'var(--radius-md)',
-                            background: 'linear-gradient(135deg, #dc2626, #f87171)',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            boxShadow: '0 2px 8px rgba(220,38,38,0.3)',
-                        }}>
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-                                <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-                            </svg>
-                        </div>
-                        <div>
-                            <h1 style={{ fontSize: '1.0625rem', fontWeight: 700, color: 'var(--gray-900)', lineHeight: 1.2 }}>Alerts & Events</h1>
-                            <p style={{ fontSize: '0.75rem', color: 'var(--gray-400)' }}>
-                                {hasSearched && !loading ? `${filteredEvents.length} event${filteredEvents.length !== 1 ? 's' : ''} found` : 'Device activity log'}
-                            </p>
-                        </div>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
+                        <h1 style={{ fontSize: '1.125rem', fontWeight: 400, color: 'var(--gray-800)', margin: 0 }}>Alerts & Events</h1>
+                        <span style={{ fontSize: '0.8125rem', color: 'var(--gray-500)' }}>
+                            {hasSearched && !loading ? `${filteredEvents.length} event${filteredEvents.length !== 1 ? 's' : ''} found` : 'Device activity log'}
+                        </span>
                     </div>
 
                     {/* Controls */}
@@ -342,14 +329,17 @@ export default function AlertsPage() {
                             }} />
                         <button onClick={fetchEvents} disabled={loading || !selectedDevice || devicesLoading}
                             style={{
-                                height: 34, padding: '0 1.125rem', fontSize: '0.8125rem', fontWeight: 600,
-                                fontFamily: 'var(--font-sans)', border: 'none', borderRadius: 'var(--radius-md)',
-                                background: loading ? 'var(--gray-200)' : 'linear-gradient(135deg, #dc2626, #ef4444)',
-                                color: loading ? 'var(--gray-400)' : 'white',
+                                height: 34, padding: '0 1.125rem', fontSize: '0.875rem', fontWeight: 500,
+                                fontFamily: 'var(--font-sans)', border: 'none', borderRadius: 'var(--radius-sm)',
+                                background: loading ? 'var(--gray-200)' : 'var(--primary-500)',
+                                color: loading ? 'var(--gray-500)' : 'white',
                                 cursor: loading ? 'not-allowed' : 'pointer',
                                 display: 'flex', alignItems: 'center', gap: '0.375rem',
-                                boxShadow: loading ? 'none' : '0 2px 6px rgba(220,38,38,0.3)',
-                            }}>
+                                transition: 'background var(--transition-fast)',
+                            }}
+                            onMouseEnter={e => { if (!loading && selectedDevice) e.currentTarget.style.background = 'var(--primary-600)'; }}
+                            onMouseLeave={e => { if (!loading) e.currentTarget.style.background = loading ? 'var(--gray-200)' : 'var(--primary-500)'; }}
+                        >
                             {loading
                                 ? <><div className="map-loading-spinner" style={{ width: 13, height: 13, borderWidth: 2 }} />Loading…</>
                                 : <><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3" /></svg>Load Events</>
@@ -375,10 +365,10 @@ export default function AlertsPage() {
                                 return (
                                     <button key={ft.key} onClick={() => setFilterType(ft.key)}
                                         style={{
-                                            padding: '0.3125rem 0.75rem', fontSize: '0.75rem', fontWeight: 600,
-                                            fontFamily: 'var(--font-sans)', borderRadius: 'var(--radius-full)',
+                                            padding: '0.3125rem 0.75rem', fontSize: '0.8125rem', fontWeight: 500,
+                                            fontFamily: 'var(--font-sans)', borderRadius: 'var(--radius-sm)',
                                             border: isActive ? 'none' : '1px solid var(--gray-200)',
-                                            background: isActive ? '#1e3a5f' : 'white',
+                                            background: isActive ? 'var(--primary-500)' : 'white',
                                             color: isActive ? 'white' : 'var(--gray-600)',
                                             cursor: 'pointer', transition: 'all 0.12s',
                                             display: 'flex', alignItems: 'center', gap: '0.375rem',

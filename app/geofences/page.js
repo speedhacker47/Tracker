@@ -114,16 +114,16 @@ function CreateModal({ onClose, onCreate }) {
                 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
                         <div style={{
-                            width: 34, height: 34, borderRadius: 'var(--radius-md)',
-                            background: 'linear-gradient(135deg, #0891b2, #06b6d4)',
+                            width: 32, height: 32, borderRadius: 'var(--radius-sm)',
+                            background: 'var(--primary-50)',
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                         }}>
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--primary-500)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                                 <path d="M12 22s-8-4.5-8-11.8A8 8 0 0 1 12 2a8 8 0 0 1 8 8.2c0 7.3-8 11.8-8 11.8z" />
                                 <circle cx="12" cy="10" r="3" />
                             </svg>
                         </div>
-                        <span style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--gray-900)' }}>New Geofence</span>
+                        <span style={{ fontSize: '1rem', fontWeight: 400, color: 'var(--gray-800)' }}>New Geofence</span>
                     </div>
                     <button onClick={onClose} style={{
                         width: 30, height: 30, borderRadius: '50%', border: '1px solid var(--gray-200)',
@@ -208,12 +208,11 @@ function CreateModal({ onClose, onCreate }) {
                         }}>Cancel</button>
                     <button onClick={handleSubmit} disabled={loading}
                         style={{
-                            height: 36, padding: '0 1.25rem', fontSize: '0.875rem', fontWeight: 600,
-                            fontFamily: 'var(--font-sans)', border: 'none', borderRadius: 'var(--radius-md)',
-                            background: loading ? 'var(--gray-300)' : 'linear-gradient(135deg, #0891b2, #06b6d4)',
+                            height: 36, padding: '0 1.25rem', fontSize: '0.875rem', fontWeight: 500,
+                            fontFamily: 'var(--font-sans)', border: 'none', borderRadius: 'var(--radius-sm)',
+                            background: loading ? 'var(--gray-300)' : 'var(--primary-500)',
                             color: 'white', cursor: loading ? 'not-allowed' : 'pointer',
                             display: 'flex', alignItems: 'center', gap: '0.375rem',
-                            boxShadow: loading ? 'none' : '0 2px 6px rgba(8,145,178,0.3)',
                         }}>
                         {loading ? <><div className="map-loading-spinner" style={{ width: 13, height: 13, borderWidth: 2 }} />Creating…</> : 'Create Geofence'}
                     </button>
@@ -337,24 +336,11 @@ export default function GeofencesPage() {
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                     gap: '1rem', flexWrap: 'wrap',
                 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem' }}>
-                        <div style={{
-                            width: 38, height: 38, borderRadius: 'var(--radius-md)',
-                            background: 'linear-gradient(135deg, #0891b2, #06b6d4)',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            boxShadow: '0 2px 8px rgba(8,145,178,0.3)',
-                        }}>
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M12 22s-8-4.5-8-11.8A8 8 0 0 1 12 2a8 8 0 0 1 8 8.2c0 7.3-8 11.8-8 11.8z" />
-                                <circle cx="12" cy="10" r="3" />
-                            </svg>
-                        </div>
-                        <div>
-                            <h1 style={{ fontSize: '1.0625rem', fontWeight: 700, color: 'var(--gray-900)', lineHeight: 1.2 }}>Geofences</h1>
-                            <p style={{ fontSize: '0.75rem', color: 'var(--gray-400)' }}>
-                                {loading ? 'Loading…' : `${geofences.length} zone${geofences.length !== 1 ? 's' : ''} defined`}
-                            </p>
-                        </div>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
+                        <h1 style={{ fontSize: '1.125rem', fontWeight: 400, color: 'var(--gray-800)', margin: 0 }}>Geofences</h1>
+                        <span style={{ fontSize: '0.8125rem', color: 'var(--gray-500)' }}>
+                            {loading ? 'Loading…' : `${geofences.length} zone${geofences.length !== 1 ? 's' : ''} defined`}
+                        </span>
                     </div>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
@@ -380,13 +366,16 @@ export default function GeofencesPage() {
                         {/* Create button */}
                         <button onClick={() => setShowCreate(true)}
                             style={{
-                                height: 34, padding: '0 1rem', fontSize: '0.8125rem', fontWeight: 600,
-                                fontFamily: 'var(--font-sans)', border: 'none', borderRadius: 'var(--radius-md)',
-                                background: 'linear-gradient(135deg, #0891b2, #06b6d4)',
+                                height: 34, padding: '0 1rem', fontSize: '0.875rem', fontWeight: 500,
+                                fontFamily: 'var(--font-sans)', border: 'none', borderRadius: 'var(--radius-sm)',
+                                background: 'var(--primary-500)',
                                 color: 'white', cursor: 'pointer',
                                 display: 'flex', alignItems: 'center', gap: '0.375rem',
-                                boxShadow: '0 2px 6px rgba(8,145,178,0.3)',
-                            }}>
+                                transition: 'background var(--transition-fast)',
+                            }}
+                            onMouseEnter={e => e.currentTarget.style.background = 'var(--primary-600)'}
+                            onMouseLeave={e => e.currentTarget.style.background = 'var(--primary-500)'}
+                        >
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                                 <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
                             </svg>
