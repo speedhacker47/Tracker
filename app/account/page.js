@@ -293,22 +293,9 @@ export default function AccountPage() {
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                     gap: '1rem',
                 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem' }}>
-                        <div style={{
-                            width: 38, height: 38, borderRadius: 'var(--radius-md)',
-                            background: 'linear-gradient(135deg, #1e3a5f, #2563eb)',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            boxShadow: '0 2px 8px rgba(37,99,235,0.3)',
-                        }}>
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                                <circle cx="12" cy="7" r="4" />
-                            </svg>
-                        </div>
-                        <div>
-                            <h1 style={{ fontSize: '1.0625rem', fontWeight: 700, color: 'var(--gray-900)', lineHeight: 1.2 }}>Account</h1>
-                            <p style={{ fontSize: '0.75rem', color: 'var(--gray-400)' }}>Profile & device management</p>
-                        </div>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
+                        <h1 style={{ fontSize: '1.125rem', fontWeight: 400, color: 'var(--gray-800)', margin: 0 }}>Account</h1>
+                        <span style={{ fontSize: '0.8125rem', color: 'var(--gray-500)' }}>Profile & device management</span>
                     </div>
 
                     {/* Logout button */}
@@ -342,12 +329,13 @@ export default function AccountPage() {
                         }}>
                             {/* Avatar */}
                             <div style={{
-                                width: 64, height: 64, borderRadius: '50%',
-                                background: 'linear-gradient(135deg, #1e3a5f, #2563eb)',
+                                width: 56, height: 56, borderRadius: '50%',
+                                background: 'var(--primary-50)',
+                                border: '2px solid var(--primary-100)',
                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                flexShrink: 0, boxShadow: '0 4px 12px rgba(37,99,235,0.3)',
+                                flexShrink: 0,
                             }}>
-                                <span style={{ fontSize: '1.625rem', fontWeight: 800, color: 'white', letterSpacing: '-0.02em' }}>
+                                <span style={{ fontSize: '1.375rem', fontWeight: 500, color: 'var(--primary-600)' }}>
                                     {user?.displayName
                                         ? user.displayName.charAt(0).toUpperCase()
                                         : user?.phoneNumber
@@ -358,7 +346,7 @@ export default function AccountPage() {
 
                             {/* Info */}
                             <div style={{ flex: 1 }}>
-                                <div style={{ fontSize: '1.125rem', fontWeight: 800, color: 'var(--gray-900)', lineHeight: 1.2, marginBottom: '0.25rem' }}>
+                                <div style={{ fontSize: '1rem', fontWeight: 400, color: 'var(--gray-800)', lineHeight: 1.2, marginBottom: '0.25rem' }}>
                                     {user?.displayName || user?.phoneNumber || user?.email || 'TrackPro User'}
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
