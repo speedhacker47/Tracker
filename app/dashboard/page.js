@@ -25,8 +25,10 @@ function IgnitionBadge({ ignition }) {
     return (
         <span style={{
             display: 'inline-flex', alignItems: 'center', gap: '0.2rem',
-            padding: '0.1rem 0.4rem', borderRadius: '999px', fontSize: '0.65rem', fontWeight: 700,
-            background: ignition ? '#dcfce7' : '#f3f4f6', color: ignition ? '#16a34a' : '#9ca3af',
+            padding: '0.1rem 0.4rem', borderRadius: 'var(--radius-sm)', fontSize: '0.65rem', fontWeight: 500,
+            background: ignition ? 'var(--success-50)' : 'var(--gray-100)',
+            color: ignition ? 'var(--success-600)' : 'var(--gray-600)',
+            border: `1px solid ${ignition ? 'var(--success-100)' : 'var(--gray-200)'}`,
         }}>
             <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" /></svg>
             {ignition ? 'IGN ON' : 'IGN OFF'}
@@ -37,10 +39,11 @@ function IgnitionBadge({ ignition }) {
 function BatteryBadge({ level }) {
     if (level === null || level === undefined) return null;
     const pct = Math.round(level);
-    const color = pct > 60 ? '#16a34a' : pct > 20 ? '#d97706' : '#dc2626';
-    const bg = pct > 60 ? '#dcfce7' : pct > 20 ? '#fef3c7' : '#fee2e2';
+    const color = pct > 60 ? 'var(--success-600)' : pct > 20 ? 'var(--warning-600)' : 'var(--danger-600)';
+    const bg = pct > 60 ? 'var(--success-50)' : pct > 20 ? 'var(--warning-50)' : 'var(--danger-50)';
+    const border = pct > 60 ? 'var(--success-100)' : pct > 20 ? 'var(--warning-100)' : 'var(--danger-100)';
     return (
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.2rem', padding: '0.1rem 0.4rem', borderRadius: '999px', fontSize: '0.65rem', fontWeight: 700, background: bg, color }}>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.2rem', padding: '0.1rem 0.4rem', borderRadius: 'var(--radius-sm)', fontSize: '0.65rem', fontWeight: 500, background: bg, color, border: `1px solid ${border}` }}>
             🔋 {pct}%
         </span>
     );
@@ -52,8 +55,10 @@ function AlarmBadge({ alarm }) {
     return (
         <span style={{
             display: 'inline-flex', alignItems: 'center', gap: '0.2rem',
-            padding: '0.1rem 0.4rem', borderRadius: '999px', fontSize: '0.65rem', fontWeight: 700,
-            background: '#fee2e2', color: '#b91c1c', animation: 'alarm-pulse 1.5s ease-in-out infinite',
+            padding: '0.1rem 0.4rem', borderRadius: 'var(--radius-sm)', fontSize: '0.65rem', fontWeight: 500,
+            background: 'var(--danger-50)', color: 'var(--danger-600)',
+            border: '1px solid var(--danger-100)',
+            animation: 'alarm-pulse 1.5s ease-in-out infinite',
         }}>⚠ {labels[alarm] || alarm}</span>
     );
 }

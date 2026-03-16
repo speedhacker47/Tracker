@@ -48,12 +48,13 @@ function SortIcon({ col, sortBy, sortDir }) {
 }
 
 function IgnitionBadge({ on }) {
-    if (on === null || on === undefined) return <span style={{ color: 'var(--gray-300)' }}>—</span>;
+    if (on === null || on === undefined) return <span style={{ color: 'var(--gray-600)' }}>—</span>;
     return (
         <span style={{
             display: 'inline-flex', alignItems: 'center', gap: '0.25rem',
-            padding: '0.2rem 0.5rem', borderRadius: '999px', fontSize: '0.7rem', fontWeight: 700,
-            background: on ? '#dcfce7' : '#f3f4f6', color: on ? '#16a34a' : '#9ca3af',
+            padding: '0.2rem 0.5rem', borderRadius: 'var(--radius-sm)', fontSize: '0.7rem', fontWeight: 500,
+            background: on ? 'var(--success-50)' : 'var(--gray-100)', color: on ? 'var(--success-600)' : 'var(--gray-600)',
+            border: `1px solid ${on ? 'var(--success-100)' : 'var(--gray-200)'}`,
         }}>
             <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                 <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
@@ -64,12 +65,13 @@ function IgnitionBadge({ on }) {
 }
 
 function MotionBadge({ moving }) {
-    if (moving === null || moving === undefined) return <span style={{ color: 'var(--gray-300)' }}>—</span>;
+    if (moving === null || moving === undefined) return <span style={{ color: 'var(--gray-600)' }}>—</span>;
     return (
         <span style={{
             display: 'inline-flex', alignItems: 'center', gap: '0.25rem',
-            padding: '0.2rem 0.5rem', borderRadius: '999px', fontSize: '0.7rem', fontWeight: 700,
-            background: moving ? '#dbeafe' : '#f3f4f6', color: moving ? '#1d4ed8' : '#9ca3af',
+            padding: '0.2rem 0.5rem', borderRadius: 'var(--radius-sm)', fontSize: '0.7rem', fontWeight: 500,
+            background: moving ? 'var(--primary-50)' : 'var(--gray-100)', color: moving ? 'var(--primary-600)' : 'var(--gray-600)',
+            border: `1px solid ${moving ? 'var(--primary-100)' : 'var(--gray-200)'}`,
         }}>
             {moving ? (
                 <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" /></svg>
@@ -86,10 +88,10 @@ function AlarmBadge({ alarm }) {
     const labels = { sos: 'SOS', panic: 'SOS', overspeed: 'Overspeed', geofenceEnter: 'Geo In', geofenceExit: 'Geo Out', powerCut: 'Power Cut', lowBattery: 'Low Bat', vibration: 'Vibration', accident: 'Accident' };
     return (
         <span style={{
-            display: 'inline-flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.7rem', fontWeight: 700,
-            padding: '0.2rem 0.5rem', borderRadius: '999px',
-            background: 'var(--danger-50)', color: 'var(--danger-700)',
-            border: '1px solid var(--danger-200)', animation: 'alarm-pulse 1.5s ease-in-out infinite',
+            display: 'inline-flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.7rem', fontWeight: 500,
+            padding: '0.2rem 0.5rem', borderRadius: 'var(--radius-sm)',
+            background: 'var(--danger-50)', color: 'var(--danger-600)',
+            border: '1px solid var(--danger-100)', animation: 'alarm-pulse 1.5s ease-in-out infinite',
         }}>
             ⚠ {labels[alarm] || alarm}
         </span>
@@ -113,8 +115,8 @@ function BatteryBar({ level }) {
 function DetailBlock({ label, value, accent }) {
     return (
         <div>
-            <div style={{ fontSize: '0.6875rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--primary-400)', marginBottom: '0.25rem' }}>{label}</div>
-            <div style={{ fontSize: '0.875rem', fontWeight: 500, color: accent || 'var(--gray-700)' }}>{value}</div>
+            <div style={{ fontSize: '0.6875rem', fontWeight: 400, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--gray-600)', marginBottom: '0.25rem' }}>{label}</div>
+            <div style={{ fontSize: '0.875rem', fontWeight: 400, color: accent || 'var(--gray-800)' }}>{value}</div>
         </div>
     );
 }
@@ -290,10 +292,10 @@ export default function VehiclesPage() {
                         <button onClick={() => router.push('/claim')}
                             style={{
                                 height: 36, padding: '0 1rem', display: 'flex', alignItems: 'center', gap: '0.375rem',
-                                fontSize: '0.8125rem', fontWeight: 600, fontFamily: 'var(--font-sans)',
-                                background: 'linear-gradient(135deg, #1e3a5f, #2563eb)', color: 'white',
-                                border: 'none', borderRadius: 'var(--radius-md)', cursor: 'pointer',
-                                boxShadow: '0 2px 6px rgba(37,99,235,0.3)',
+                                fontSize: '0.8125rem', fontWeight: 500, fontFamily: 'var(--font-sans)',
+                                background: 'var(--primary-500)', color: 'white',
+                                border: 'none', borderRadius: 'var(--radius-sm)', cursor: 'pointer',
+                                boxShadow: 'none', transition: 'background var(--transition-fast)',
                             }}>
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                                 <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="16" /><line x1="8" y1="12" x2="16" y2="12" />
@@ -303,7 +305,7 @@ export default function VehiclesPage() {
 
                         {/* Refresh */}
                         <button onClick={fetchData}
-                            style={{ height: 36, padding: '0 0.875rem', display: 'flex', alignItems: 'center', gap: '0.375rem', fontSize: '0.8125rem', fontWeight: 500, fontFamily: 'var(--font-sans)', background: 'white', color: 'var(--gray-600)', border: '1px solid var(--gray-200)', borderRadius: 'var(--radius-md)', cursor: 'pointer' }}>
+                            style={{ height: 36, padding: '0 0.875rem', display: 'flex', alignItems: 'center', gap: '0.375rem', fontSize: '0.8125rem', fontWeight: 400, fontFamily: 'var(--font-sans)', background: 'white', color: 'var(--gray-700)', border: '1px solid var(--gray-300)', borderRadius: 'var(--radius-sm)', cursor: 'pointer', transition: 'background var(--transition-fast)', }}>
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                 <polyline points="23 4 23 10 17 10" /><polyline points="1 20 1 14 7 14" />
                                 <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
@@ -316,20 +318,20 @@ export default function VehiclesPage() {
                 {/* ── Table area ── */}
                 <div className="vehicles-table-wrapper">
                     {sorted.length === 0 ? (
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '4rem', color: 'var(--gray-400)' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '4rem', color: 'var(--gray-600)' }}>
                             <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.25" style={{ opacity: 0.3, marginBottom: '1rem' }}>
                                 <rect x="1" y="3" width="15" height="13" rx="2" /><polygon points="16 8 20 8 23 11 23 16 16 16 16 8" />
                                 <circle cx="5.5" cy="18.5" r="2.5" /><circle cx="18.5" cy="18.5" r="2.5" />
                             </svg>
-                            <p style={{ fontWeight: 600, marginBottom: '0.5rem' }}>{search || statusFilter !== 'all' ? 'No vehicles match your filters' : 'No vehicles found'}</p>
+                            <p style={{ fontWeight: 400, marginBottom: '0.5rem' }}>{search || statusFilter !== 'all' ? 'No vehicles match your filters' : 'No vehicles found'}</p>
                             {!search && statusFilter === 'all' && (
-                                <button onClick={() => router.push('/claim')} style={{ marginTop: '0.5rem', height: 36, padding: '0 1.25rem', background: 'linear-gradient(135deg, #1e3a5f, #2563eb)', color: 'white', border: 'none', borderRadius: 8, fontSize: '0.875rem', fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer' }}>
+                                <button onClick={() => router.push('/claim')} style={{ marginTop: '0.5rem', height: 36, padding: '0 1.25rem', background: 'var(--primary-500)', color: 'white', border: 'none', borderRadius: 'var(--radius-sm)', fontSize: '0.875rem', fontWeight: 500, fontFamily: 'inherit', cursor: 'pointer' }}>
                                     + Add your first device
                                 </button>
                             )}
                         </div>
                     ) : (
-                        <div style={{ background: 'white', borderRadius: 'var(--radius-xl)', border: '1px solid var(--gray-200)', boxShadow: 'var(--shadow-sm)', overflow: 'hidden' }}>
+                        <div style={{ background: 'white', borderRadius: 'var(--radius-md)', border: '1px solid var(--gray-300)', overflow: 'hidden' }}>
                             <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0 }}>
                                 <thead>
                                     <tr style={{ background: 'var(--gray-50)' }}>
@@ -376,7 +378,7 @@ export default function VehiclesPage() {
                                                     onMouseLeave={e => { if (!isExpanded) e.currentTarget.style.background = 'white'; }}
                                                 >
                                                     {/* Vehicle name */}
-                                                    <td style={{ padding: '0.875rem 1rem', borderBottom: isExpanded ? 'none' : '1px solid var(--gray-100)' }}>
+                                                    <td style={{ padding: '1rem', borderBottom: isExpanded ? 'none' : '1px solid var(--gray-200)' }}>
                                                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
                                                             <div style={{ width: 32, height: 32, borderRadius: 'var(--radius-sm)', background: meta.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                                                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={meta.color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -385,7 +387,7 @@ export default function VehiclesPage() {
                                                                 </svg>
                                                             </div>
                                                             <div>
-                                                                <div style={{ fontWeight: 700, color: 'var(--gray-900)', fontSize: '0.875rem' }}>{v.name}</div>
+                                                                <div style={{ fontWeight: 500, color: 'var(--gray-800)', fontSize: '0.875rem' }}>{v.name}</div>
                                                                 {v.alarm && <AlarmBadge alarm={v.alarm} />}
                                                             </div>
                                                         </div>
@@ -426,7 +428,7 @@ export default function VehiclesPage() {
                                                     </td>
 
                                                     {/* Speed */}
-                                                    <td style={{ padding: '0.875rem 1rem', borderBottom: isExpanded ? 'none' : '1px solid var(--gray-100)', fontWeight: v.position?.speed > 0 ? 700 : 400, color: v.position?.speed > 0 ? 'var(--primary-600)' : 'var(--gray-400)', fontSize: '0.875rem' }}>
+                                                    <td style={{ padding: '1rem', borderBottom: isExpanded ? 'none' : '1px solid var(--gray-200)', fontWeight: v.position?.speed > 0 ? 500 : 400, color: v.position?.speed > 0 ? 'var(--primary-600)' : 'var(--gray-600)', fontSize: '0.875rem' }}>
                                                         {v.position ? `${Math.round(v.position.speed * 1.852)} km/h` : '—'}
                                                     </td>
 
@@ -472,8 +474,8 @@ export default function VehiclesPage() {
                                                 {isExpanded && (
                                                     <tr key={`${v.id}-expanded`}>
                                                         <td colSpan={9} style={{ padding: 0, borderBottom: '1px solid var(--gray-200)' }}>
-                                                            <div style={{ background: 'var(--primary-50)', borderTop: '1px solid var(--primary-100)', padding: '1.25rem 1.5rem' }}>
-                                                                <div style={{ fontSize: '0.6875rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--primary-500)', marginBottom: '1rem' }}>
+                                                            <div style={{ background: 'var(--gray-50)', borderTop: '1px solid var(--gray-200)', padding: '1.5rem 2rem' }}>
+                                                                <div style={{ fontSize: '0.6875rem', fontWeight: 400, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--gray-600)', marginBottom: '1rem' }}>
                                                                     Full device details
                                                                 </div>
                                                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))', gap: '1rem' }}>
@@ -531,7 +533,7 @@ export default function VehiclesPage() {
                             </table>
 
                             {/* Footer */}
-                            <div style={{ padding: '0.75rem 1rem', background: 'var(--gray-50)', borderTop: '1px solid var(--gray-100)', fontSize: '0.75rem', color: 'var(--gray-400)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div style={{ padding: '0.75rem 1.25rem', background: 'white', borderTop: '1px solid var(--gray-200)', fontSize: '0.75rem', color: 'var(--gray-600)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <span>Showing {sorted.length} of {vehicles.length} vehicles</span>
                                 <span>Click a row to expand full details · Click Actions to navigate</span>
                             </div>

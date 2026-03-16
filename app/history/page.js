@@ -42,19 +42,19 @@ function StatCard({ label, value, icon, accent }) {
     return (
         <div style={{
             display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-            padding: '0.875rem 0.5rem', borderRadius: 'var(--radius-lg)',
-            background: accent ? `${accent}10` : 'var(--gray-50)',
-            border: `1px solid ${accent ? `${accent}25` : 'var(--gray-200)'}`,
+            padding: '0.875rem 0.5rem', borderRadius: 'var(--radius-md)',
+            background: 'white',
+            border: `1px solid var(--gray-200)`,
             gap: '0.25rem', flex: 1, minWidth: 0,
         }}>
-            {icon && <div style={{ color: accent || 'var(--gray-400)', marginBottom: '0.125rem' }}>{icon}</div>}
+            {icon && <div style={{ color: accent || 'var(--gray-600)', marginBottom: '0.125rem' }}>{icon}</div>}
             <div style={{
-                fontSize: '1.125rem', fontWeight: 800, color: accent || 'var(--gray-800)',
-                lineHeight: 1, letterSpacing: '-0.02em',
+                fontSize: '1.125rem', fontWeight: 500, color: accent || 'var(--gray-800)',
+                lineHeight: 1,
             }}>{value}</div>
             <div style={{
-                fontSize: '0.6rem', fontWeight: 600, textTransform: 'uppercase',
-                letterSpacing: '0.07em', color: accent || 'var(--gray-400)', opacity: 0.85,
+                fontSize: '0.6rem', fontWeight: 400, textTransform: 'uppercase',
+                letterSpacing: '0.07em', color: 'var(--gray-600)',
                 textAlign: 'center', lineHeight: 1.2,
             }}>{label}</div>
         </div>
@@ -233,23 +233,23 @@ export default function HistoryPage() {
                 {/* Sidebar Header */}
                 <div style={{
                     padding: '1.25rem 1.25rem 1rem',
-                    borderBottom: '1px solid var(--gray-100)',
-                    background: 'linear-gradient(135deg, #1e3a5f, #2563eb)',
+                    borderBottom: '1px solid var(--gray-200)',
+                    background: 'white',
                     flexShrink: 0,
                 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', marginBottom: '0.25rem' }}>
                         <div style={{
                             width: 32, height: 32, borderRadius: 'var(--radius-md)',
-                            background: 'rgba(255,255,255,0.15)',
+                            background: 'var(--primary-50)',
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                         }}>
-                            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--primary-500)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                 <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
                             </svg>
                         </div>
-                        <h2 style={{ fontSize: '0.9375rem', fontWeight: 700, color: 'white', letterSpacing: '-0.01em' }}>Route History</h2>
+                        <h2 style={{ fontSize: '0.9375rem', fontWeight: 500, color: 'var(--gray-800)', letterSpacing: '-0.01em' }}>Route History</h2>
                     </div>
-                    <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.6)', marginLeft: '2.625rem' }}>
+                    <p style={{ fontSize: '0.75rem', color: 'var(--gray-600)', marginLeft: '2.625rem' }}>
                         Replay GPS trips &amp; analyze routes
                     </p>
                 </div>
@@ -271,12 +271,12 @@ export default function HistoryPage() {
                             </label>
                             {devicesLoading ? (
                                 <div style={{
-                                    height: 38, borderRadius: 'var(--radius-md)',
-                                    background: 'var(--gray-100)', border: '1.5px solid var(--gray-200)',
+                                    height: 38, borderRadius: 'var(--radius-sm)',
+                                    background: 'var(--gray-100)', border: '1px solid var(--gray-200)',
                                     display: 'flex', alignItems: 'center', padding: '0 0.75rem',
-                                    gap: '0.5rem', color: 'var(--gray-400)', fontSize: '0.875rem',
+                                    gap: '0.5rem', color: 'var(--gray-600)', fontSize: '0.875rem',
                                 }}>
-                                    <div style={{ width: 14, height: 14, border: '2px solid var(--gray-300)', borderTopColor: 'var(--primary-400)', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
+                                    <div style={{ width: 14, height: 14, border: '2px solid var(--gray-300)', borderTopColor: 'var(--primary-500)', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
                                     Loading vehicles...
                                 </div>
                             ) : (
@@ -287,11 +287,11 @@ export default function HistoryPage() {
                                         width: '100%', padding: '0.5625rem 2rem 0.5625rem 0.75rem',
                                         fontSize: '0.875rem', fontFamily: 'var(--font-sans)',
                                         color: 'var(--gray-800)', background: 'white',
-                                        border: '1.5px solid var(--gray-200)', borderRadius: 'var(--radius-md)',
+                                        border: '1px solid var(--gray-300)', borderRadius: 'var(--radius-sm)',
                                         outline: 'none', cursor: 'pointer', appearance: 'none',
-                                        backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E")`,
+                                        backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2380868b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E")`,
                                         backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.75rem center',
-                                        transition: 'all var(--transition-fast)',
+                                        transition: 'border-color var(--transition-fast)',
                                     }}
                                 >
                                     <option value="">— Select vehicle —</option>
@@ -310,9 +310,9 @@ export default function HistoryPage() {
                             ].map(({ label, value, setter }) => (
                                 <div key={label}>
                                     <label style={{
-                                        display: 'block', fontSize: '0.6875rem', fontWeight: 600,
+                                        display: 'block', fontSize: '0.6875rem', fontWeight: 400,
                                         textTransform: 'uppercase', letterSpacing: '0.06em',
-                                        color: 'var(--gray-500)', marginBottom: '0.375rem',
+                                        color: 'var(--gray-600)', marginBottom: '0.375rem',
                                     }}>{label}</label>
                                     <input
                                         type="date"
@@ -322,8 +322,8 @@ export default function HistoryPage() {
                                             width: '100%', padding: '0.5rem 0.5rem',
                                             fontSize: '0.8125rem', fontFamily: 'var(--font-sans)',
                                             color: 'var(--gray-800)', background: 'white',
-                                            border: '1.5px solid var(--gray-200)', borderRadius: 'var(--radius-md)',
-                                            outline: 'none', transition: 'all var(--transition-fast)',
+                                            border: '1px solid var(--gray-300)', borderRadius: 'var(--radius-sm)',
+                                            outline: 'none', transition: 'border-color var(--transition-fast)',
                                         }}
                                     />
                                 </div>
@@ -337,12 +337,11 @@ export default function HistoryPage() {
                             style={{
                                 width: '100%', padding: '0.625rem 1rem',
                                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
-                                fontSize: '0.875rem', fontWeight: 600, fontFamily: 'var(--font-sans)',
+                                fontSize: '0.875rem', fontWeight: 500, fontFamily: 'var(--font-sans)',
                                 color: 'white',
-                                background: loading ? 'var(--primary-400)' : 'linear-gradient(135deg, var(--primary-500), var(--primary-600))',
-                                border: 'none', borderRadius: 'var(--radius-md)', cursor: loading ? 'not-allowed' : 'pointer',
-                                boxShadow: '0 2px 8px rgba(59,130,246,0.25)',
-                                transition: 'all var(--transition-fast)',
+                                background: loading ? 'var(--primary-400)' : 'var(--primary-500)',
+                                border: 'none', borderRadius: 'var(--radius-sm)', cursor: loading ? 'not-allowed' : 'pointer',
+                                transition: 'background var(--transition-fast)',
                                 opacity: (!selectedDevice || !dateFrom || !dateTo) ? 0.6 : 1,
                             }}
                         >
@@ -484,12 +483,10 @@ export default function HistoryPage() {
                                     style={{
                                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                                         width: 44, height: 44, borderRadius: '50%',
-                                        background: isPlaying
-                                            ? 'linear-gradient(135deg, #ef4444, #dc2626)'
-                                            : 'linear-gradient(135deg, var(--primary-500), var(--primary-600))',
+                                        background: isPlaying ? 'var(--danger-500)' : 'var(--primary-500)',
                                         border: 'none', color: 'white', cursor: 'pointer',
-                                        boxShadow: isPlaying ? '0 2px 8px rgba(239,68,68,0.35)' : '0 2px 8px rgba(59,130,246,0.35)',
-                                        transition: 'all var(--transition-fast)',
+                                        boxShadow: 'var(--shadow-sm)',
+                                        transition: 'background var(--transition-fast)',
                                     }}>
                                     {isPlaying ? (
                                         <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
@@ -620,18 +617,17 @@ export default function HistoryPage() {
                 {positions.length > 0 && selectedDeviceObj && (
                     <div style={{
                         position: 'absolute', top: '1rem', right: '1rem', zIndex: 1000,
-                        background: 'rgba(255,255,255,0.95)',
-                        backdropFilter: 'blur(12px)',
-                        border: '1px solid var(--gray-200)',
-                        borderRadius: 'var(--radius-xl)',
-                        padding: '0.875rem 1rem',
-                        boxShadow: 'var(--shadow-lg)',
+                        background: 'white',
+                        border: '1px solid var(--gray-300)',
+                        borderRadius: 'var(--radius-md)',
+                        padding: '1rem 1.25rem',
+                        boxShadow: 'var(--shadow-md)',
                         minWidth: '220px',
                     }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', marginBottom: '0.625rem' }}>
                             <div style={{
-                                width: 32, height: 32, borderRadius: 'var(--radius-md)',
-                                background: 'linear-gradient(135deg, var(--primary-100), var(--primary-50))',
+                                width: 32, height: 32, borderRadius: 'var(--radius-sm)',
+                                background: 'var(--primary-50)',
                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                             }}>
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--primary-500)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -642,8 +638,8 @@ export default function HistoryPage() {
                                 </svg>
                             </div>
                             <div>
-                                <div style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--gray-900)' }}>{selectedDeviceObj.name}</div>
-                                <div style={{ fontSize: '0.6875rem', color: 'var(--gray-400)' }}>{selectedDeviceObj.uniqueId}</div>
+                                <div style={{ fontSize: '0.875rem', fontWeight: 500, color: 'var(--gray-800)' }}>{selectedDeviceObj.name}</div>
+                                <div style={{ fontSize: '0.6875rem', color: 'var(--gray-600)' }}>{selectedDeviceObj.uniqueId}</div>
                             </div>
                         </div>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.375rem' }}>
@@ -655,10 +651,11 @@ export default function HistoryPage() {
                             ].map(({ label, value }) => (
                                 <div key={label} style={{
                                     background: 'var(--gray-50)', borderRadius: 'var(--radius-sm)',
+                                    border: '1px solid var(--gray-200)',
                                     padding: '0.375rem 0.5rem',
                                 }}>
-                                    <div style={{ fontSize: '0.6rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--gray-400)' }}>{label}</div>
-                                    <div style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--gray-800)' }}>{value}</div>
+                                    <div style={{ fontSize: '0.6rem', fontWeight: 400, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--gray-600)' }}>{label}</div>
+                                    <div style={{ fontSize: '0.8125rem', fontWeight: 500, color: 'var(--gray-800)' }}>{value}</div>
                                 </div>
                             ))}
                         </div>
@@ -684,8 +681,8 @@ export default function HistoryPage() {
                 {positions.length > 1 && (
                     <div style={{
                         position: 'absolute', bottom: '1.5rem', right: '1rem', zIndex: 1000,
-                        background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(12px)',
-                        border: '1px solid var(--gray-200)', borderRadius: 'var(--radius-lg)',
+                        background: 'white',
+                        border: '1px solid var(--gray-300)', borderRadius: 'var(--radius-md)',
                         padding: '0.625rem 0.875rem', boxShadow: 'var(--shadow-md)',
                     }}>
                         <div style={{ fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--gray-400)', marginBottom: '0.375rem' }}>Legend</div>
