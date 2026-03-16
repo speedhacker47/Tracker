@@ -216,15 +216,14 @@ export default function DashboardPage() {
                     {/* Stats card */}
                     <div className="float-stats-card">
                         {[
-                            { dot: 'var(--success-500)', count: stats.online, color: 'var(--success-600)', label: 'Online' },
-                            { dot: 'var(--warning-500)', count: stats.idle, color: 'var(--warning-600)', label: 'Idle' },
-                            { dot: 'var(--gray-400)', count: stats.offline, color: 'var(--gray-600)', label: 'Offline' },
-                            { dot: 'var(--primary-500)', count: stats.total, color: 'var(--primary-600)', label: 'Total' },
+                            { color: 'var(--success-500)', count: stats.online, label: 'Online' },
+                            { color: 'var(--warning-500)', count: stats.idle, label: 'Idle' },
+                            { color: 'var(--gray-500)', count: stats.offline, label: 'Offline' },
+                            { color: 'var(--primary-500)', count: stats.total, label: 'Total' },
                         ].map((s, i) => (
                             <>
                                 {i > 0 && <div key={`div-${i}`} className="float-stat-divider" />}
                                 <div key={s.label} className="float-stat">
-                                    <span className="float-stat-dot" style={{ background: s.dot }} />
                                     <span className="float-stat-count" style={{ color: s.color }}>{s.count}</span>
                                     <span className="float-stat-label">{s.label}</span>
                                 </div>
@@ -235,7 +234,7 @@ export default function DashboardPage() {
                     {/* Vehicle list card */}
                     <div className="float-vehicles-card">
                         <div className="float-search-row">
-                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: 'var(--gray-400)', flexShrink: 0 }}>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: 'var(--gray-500)', flexShrink: 0 }}>
                                 <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
                             </svg>
                             <input
@@ -298,7 +297,7 @@ export default function DashboardPage() {
                                                     </div>
                                                 ) : (
                                                     !vehicle.position && (
-                                                        <div style={{ fontSize: '0.6875rem', color: 'var(--gray-300)', marginTop: '0.1rem' }}>No GPS data</div>
+                                                        <div style={{ fontSize: '0.6875rem', color: 'var(--gray-500)', marginTop: '0.1rem' }}>No GPS data</div>
                                                     )
                                                 )}
 
@@ -342,9 +341,20 @@ export default function DashboardPage() {
                 </div>
 
                 {/* Sync indicator */}
-                <div className={`refresh-indicator ${refreshing ? 'refreshing' : ''}`}>
-                    <div className={`refresh-dot ${refreshing ? 'refreshing' : ''}`} />
-                    {refreshing ? 'Updating...' : lastUpdate ? `Updated ${formatTimeAgo(lastUpdate)}` : 'Live'}
+                <div style={{
+                    position: 'absolute', top: '1rem', right: '1rem', zIndex: 1000,
+                    display: 'flex', alignItems: 'center', gap: '0.375rem',
+                    background: 'white', border: '1px solid var(--gray-200)',
+                    borderRadius: 'var(--radius-full)', padding: '0.3rem 0.75rem',
+                    boxShadow: 'var(--shadow-sm)', fontSize: '0.75rem', color: 'var(--gray-700)',
+                }}>
+                    <span style={{
+                        width: 7, height: 7, borderRadius: '50%',
+                        background: refreshing ? 'var(--warning-500)' : 'var(--success-500)',
+                        display: 'inline-block',
+                        animation: refreshing ? 'alarm-pulse 0.8s ease-in-out infinite' : 'none',
+                    }} />
+                    {refreshing ? 'Updating...' : lastUpdate ? `Updated Just now` : 'Live'}
                 </div>
 
                 {error && (
