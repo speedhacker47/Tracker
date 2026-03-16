@@ -2,6 +2,10 @@ import { NextResponse } from 'next/server';
 import { verifyFirebaseToken } from '@/lib/firebase-admin';
 import { query } from '@/lib/db';
 import { getSummary } from '@/lib/traccar';
+import { userOwnsTraccarDevice } from '@/lib/ownership';
+// replace the client_devices query with:
+const owns = await userOwnsTraccarDevice(decodedToken.uid, deviceIdNum);
+if (!owns) return NextResponse.json({ error: 'Access denied' }, { status: 403 });
 
 /**
  * GET /api/reports/summary?deviceId=1&from=ISO&to=ISO
