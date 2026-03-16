@@ -2,11 +2,10 @@ import { NextResponse } from 'next/server';
 import { verifyFirebaseToken } from '@/lib/firebase-admin';
 import { getAdminRole } from '@/lib/ownership';
 import { query } from '@/lib/db';
-import { redis } from '@/lib/redis';
 
 /**
- * GET /api/admin/stats
- * Master admin dashboard stats.
+ * GET /api/admin/users?page=1&limit=50&search=
+ * List all users with device counts.
  */
 export async function GET(request) {
     try {
@@ -18,56 +17,61 @@ export async function GET(request) {
         }
 
         const { isAdmin } = await getAdminRole(decodedToken.uid);
-        if (!isAdmin)
-            return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+        if (!isAdmin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-        const [
-            totalUsers,
-            totalDevices,
-            activeDevices,
-            unclaimedDevices,
-            suspendedDevices,
-            newUsersToday,
-            newUsersThisWeek,
-        ] = await Promise.all([
-            query('SELECT COUNT(*) FROM users'),
-            query('SELECT COUNT(*) FROM devices'),
-            query("SELECT COUNT(*) FROM devices WHERE status = 'active'"),
-            query("SELECT COUNT(*) FROM devices WHERE status = 'unclaimed'"),
-            query("SELECT COUNT(*) FROM devices WHERE status = 'suspended'"),
-            query("SELECT COUNT(*) FROM users WHERE created_at >= NOW() - INTERVAL '1 day'"),
-            query("SELECT COUNT(*) FROM users WHERE created_at >= NOW() - INTERVAL '7 days'"),
-        ]);
+        const { searchParams } = new URL(request.url);
+        const page = Math.max(1, parseInt(searchParams.get('page') || '1'));
+        const limit = Math.min(100, parseInt(searchParams.get('limit') || '50'));
+        const search = searchParams.get('search') || '';
+        const offset = (page - 1) * limit;
 
-        // Online devices count from Redis
-        let onlineCount = 0;
-        try {
-            const cached = await redis.get('trackpro:positions');
-            if (cached) {
-                const positions = JSON.parse(cached);
-                onlineCount = positions.filter(p => {
-                    if (!p.fixTime) return false;
-                    return (Date.now() - new Date(p.fixTime)) / 1000 < 300;
-                }).length;
-            }
-        } catch (_) { }
+        let usersResult, countResult;
+
+        if (search) {
+            usersResult = await query(
+                `SELECT
+                    u.firebase_uid, u.phone, u.email, u.name,
+                    u.plan, u.max_devices, u.is_suspended,
+                    u.created_at, u.last_login,
+                    COUNT(ud.id)::int as device_count
+                 FROM users u
+                 LEFT JOIN user_devices ud ON ud.firebase_uid = u.firebase_uid AND ud.is_active = TRUE
+                 WHERE u.phone ILIKE $3 OR u.email ILIKE $3 OR u.name ILIKE $3
+                 GROUP BY u.firebase_uid, u.phone, u.email, u.name, u.plan, u.max_devices, u.is_suspended, u.created_at, u.last_login
+                 ORDER BY u.created_at DESC
+                 LIMIT $1 OFFSET $2`,
+                [limit, offset, `%${search}%`]
+            );
+            countResult = await query(
+                `SELECT COUNT(*) FROM users u
+                 WHERE u.phone ILIKE $1 OR u.email ILIKE $1 OR u.name ILIKE $1`,
+                [`%${search}%`]
+            );
+        } else {
+            usersResult = await query(
+                `SELECT
+                    u.firebase_uid, u.phone, u.email, u.name,
+                    u.plan, u.max_devices, u.is_suspended,
+                    u.created_at, u.last_login,
+                    COUNT(ud.id)::int as device_count
+                 FROM users u
+                 LEFT JOIN user_devices ud ON ud.firebase_uid = u.firebase_uid AND ud.is_active = TRUE
+                 GROUP BY u.firebase_uid, u.phone, u.email, u.name, u.plan, u.max_devices, u.is_suspended, u.created_at, u.last_login
+                 ORDER BY u.created_at DESC
+                 LIMIT $1 OFFSET $2`,
+                [limit, offset]
+            );
+            countResult = await query('SELECT COUNT(*) FROM users', []);
+        }
 
         return NextResponse.json({
-            users: {
-                total: parseInt(totalUsers.rows[0].count),
-                newToday: parseInt(newUsersToday.rows[0].count),
-                newThisWeek: parseInt(newUsersThisWeek.rows[0].count),
-            },
-            devices: {
-                total: parseInt(totalDevices.rows[0].count),
-                active: parseInt(activeDevices.rows[0].count),
-                unclaimed: parseInt(unclaimedDevices.rows[0].count),
-                suspended: parseInt(suspendedDevices.rows[0].count),
-                onlineNow: onlineCount,
-            },
+            users: usersResult.rows,
+            total: parseInt(countResult.rows[0].count),
+            page,
+            limit,
         });
     } catch (err) {
-        console.error('[Admin/Stats] Error:', err.message);
-        return NextResponse.json({ error: 'Failed to fetch stats' }, { status: 500 });
+        console.error('[Admin/Users] Error:', err.message);
+        return NextResponse.json({ error: 'Failed to fetch users' }, { status: 500 });
     }
 }
