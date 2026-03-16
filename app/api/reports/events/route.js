@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { verifyFirebaseToken } from '@/lib/firebase-admin';
-import { query } from '@/lib/db';
 import { getEvents } from '@/lib/traccar';
 
 /**
@@ -47,13 +46,10 @@ export async function GET(request) {
             return NextResponse.json({ error: 'Date range cannot exceed 31 days' }, { status: 400 });
         }
 
-        const ownership = await query(
-            'SELECT id FROM client_devices WHERE firebase_uid = $1 AND traccar_device_id = $2',
-            [decodedToken.uid, deviceIdNum]
-        );
-        if (ownership.rows.length === 0) {
-            return NextResponse.json({ error: 'Access denied to this device' }, { status: 403 });
-        }
+        // ── Ownership check ──
+        const { userOwnsTraccarDevice } = await import('@/lib/ownership');
+        const owns = await userOwnsTraccarDevice(decodedToken.uid, deviceIdNum);
+        if (!owns) return NextResponse.json({ error: 'Access denied to this device' }, { status: 403 });
 
         const events = await getEvents(deviceIdNum, fromDate, toDate, type);
 

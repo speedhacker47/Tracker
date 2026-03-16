@@ -1,12 +1,8 @@
 import { NextResponse } from 'next/server';
 import { verifyFirebaseToken } from '@/lib/firebase-admin';
-import { query } from '@/lib/db';
 import { getTrips } from '@/lib/traccar';
 
 import { userOwnsTraccarDevice } from '@/lib/ownership';
-// replace the client_devices query with:
-const owns = await userOwnsTraccarDevice(decodedToken.uid, deviceIdNum);
-if (!owns) return NextResponse.json({ error: 'Access denied' }, { status: 403 });
 
 /**
  * GET /api/reports/trips?deviceId=1&from=ISO&to=ISO
@@ -52,13 +48,9 @@ export async function GET(request) {
         }
 
         // ── Ownership check ──
-        const ownership = await query(
-            'SELECT id FROM client_devices WHERE firebase_uid = $1 AND traccar_device_id = $2',
-            [decodedToken.uid, deviceIdNum]
-        );
-        if (ownership.rows.length === 0) {
-            return NextResponse.json({ error: 'Access denied to this device' }, { status: 403 });
-        }
+        const { userOwnsTraccarDevice } = await import('@/lib/ownership');
+        const owns = await userOwnsTraccarDevice(decodedToken.uid, deviceIdNum);
+        if (!owns) return NextResponse.json({ error: 'Access denied to this device' }, { status: 403 });
 
         // ── Fetch from Traccar ──
         const trips = await getTrips(deviceIdNum, fromDate, toDate);
