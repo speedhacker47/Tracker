@@ -1926,3 +1926,200 @@ body {
 .float-status-label-offline {
   color: var(--gray-400);
 }
+
+/* =====================================================
+   NAV TOKENS — used by NavBar in both themes
+   ===================================================== */
+:root {
+  --nav-bg: white;
+  --nav-border: var(--gray-200);
+  --nav-text: var(--gray-800);
+  --nav-text-muted: var(--gray-600);
+  --nav-hover-bg: var(--gray-100);
+  --nav-active-bg: var(--primary-50);
+}
+
+/* =====================================================
+   DARK THEME — Google Material Design dark palette
+   ===================================================== */
+[data-theme="dark"] {
+  /* Primary — slightly lighter blue for dark surfaces */
+  --primary-50:  #1a2744;
+  --primary-100: #1e3260;
+  --primary-500: #8ab4f8;
+  --primary-600: #aecbfa;
+
+  /* Status */
+  --success-50:  #0d2818;
+  --success-100: #133a24;
+  --success-500: #81c995;
+  --success-600: #a8d5b5;
+
+  --warning-50:  #2d2000;
+  --warning-100: #3d2d00;
+  --warning-500: #fdd663;
+  --warning-600: #fee896;
+
+  --danger-50:   #2c1510;
+  --danger-100:  #3e1c16;
+  --danger-500:  #f28b82;
+  --danger-600:  #f6aea9;
+
+  /* Neutrals — Google dark surface tokens */
+  --gray-25:  #1e1e1e;
+  --gray-50:  #202124;
+  --gray-100: #2a2b2e;
+  --gray-200: #303134;
+  --gray-300: #3c3f44;
+  --gray-400: #5f6368;
+  --gray-500: #9aa0a6;
+  --gray-600: #bdc1c6;
+  --gray-700: #d2d5d9;
+  --gray-800: #e8eaed;
+  --gray-900: #f8f9fa;
+
+  /* Nav tokens */
+  --nav-bg:         #202124;
+  --nav-border:     #303134;
+  --nav-text:       #e8eaed;
+  --nav-text-muted: #9aa0a6;
+  --nav-hover-bg:   #303134;
+  --nav-active-bg:  #1a2744;
+
+  /* Shadows on dark */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.5), 0 1px 3px 1px rgb(0 0 0 / 0.3);
+  --shadow-md: 0 1px 3px 0 rgb(0 0 0 / 0.5), 0 4px 8px 3px rgb(0 0 0 / 0.3);
+  --shadow-lg: 0 2px 6px 2px rgb(0 0 0 / 0.3), 0 1px 2px 0 rgb(0 0 0 / 0.5);
+}
+
+/* Body & background */
+[data-theme="dark"] body {
+  background-color: var(--gray-50);
+  color: var(--gray-800);
+}
+
+/* ── White surfaces → dark cards ── */
+[data-theme="dark"] .dashboard-shell,
+[data-theme="dark"] .vehicles-page,
+[data-theme="dark"] .history-page {
+  background: var(--gray-50);
+}
+
+/* White → dark surface for any white-bg element */
+[data-theme="dark"] [style*="background: white"],
+[data-theme="dark"] [style*="background:white"] {
+  background: var(--gray-200) !important;
+}
+[data-theme="dark"] [style*="background: 'white'"] {
+  background: var(--gray-200) !important;
+}
+
+/* ── White-bg panels passed via className ── */
+[data-theme="dark"] .float-stats-card,
+[data-theme="dark"] .float-vehicles-card {
+  background: var(--gray-200) !important;
+  border-color: var(--gray-300) !important;
+}
+
+[data-theme="dark"] .float-vehicle-row {
+  border-bottom-color: var(--gray-300) !important;
+}
+[data-theme="dark"] .float-vehicle-row:hover,
+[data-theme="dark"] .float-vehicle-row.active {
+  background: var(--gray-300) !important;
+}
+
+[data-theme="dark"] .float-vehicle-name {
+  color: var(--gray-800) !important;
+}
+
+[data-theme="dark"] .float-search-input {
+  background: var(--gray-100) !important;
+  color: var(--gray-800) !important;
+  border-color: var(--gray-300) !important;
+}
+
+[data-theme="dark"] .float-list-header {
+  color: var(--gray-600) !important;
+  border-bottom-color: var(--gray-300) !important;
+}
+
+/* ── Map loading overlay ── */
+[data-theme="dark"] .map-loading {
+  background: var(--gray-100) !important;
+  color: var(--gray-600) !important;
+}
+
+/* ── Vehicles page table ── */
+[data-theme="dark"] .vehicles-table-header {
+  background: var(--gray-100) !important;
+  border-bottom-color: var(--gray-300) !important;
+}
+[data-theme="dark"] .vehicles-table-row {
+  border-bottom-color: var(--gray-300) !important;
+}
+[data-theme="dark"] .vehicles-table-row:hover {
+  background: var(--gray-100) !important;
+}
+[data-theme="dark"] .vehicles-expanded-row {
+  background: var(--gray-100) !important;
+  border-top-color: var(--gray-300) !important;
+}
+
+/* ── History sidebar ── */
+[data-theme="dark"] .history-sidebar {
+  background: var(--gray-200) !important;
+  border-right-color: var(--gray-300) !important;
+}
+
+/* ── Global input/select/textarea ── */
+[data-theme="dark"] input,
+[data-theme="dark"] select,
+[data-theme="dark"] textarea {
+  background: var(--gray-100) !important;
+  color: var(--gray-800) !important;
+  border-color: var(--gray-300) !important;
+}
+[data-theme="dark"] input::placeholder,
+[data-theme="dark"] textarea::placeholder {
+  color: var(--gray-500) !important;
+}
+[data-theme="dark"] input:focus,
+[data-theme="dark"] select:focus,
+[data-theme="dark"] textarea:focus {
+  border-color: var(--primary-500) !important;
+}
+
+/* ── Scrollbar in dark ── */
+[data-theme="dark"] ::-webkit-scrollbar-thumb {
+  background: var(--gray-300);
+}
+[data-theme="dark"] ::-webkit-scrollbar-track {
+  background: var(--gray-100);
+}
+
+/* ── Modals / overlays ── */
+[data-theme="dark"] [style*="background: 'rgba(0,0,0"] {
+  background: rgba(0, 0, 0, 0.65) !important;
+}
+
+/* ── Error toast ── */
+[data-theme="dark"] .error-toast {
+  background: var(--gray-200) !important;
+  border-color: var(--danger-500) !important;
+  color: var(--danger-500) !important;
+}
+
+/* ── Refresh indicator ── */
+[data-theme="dark"] .refresh-indicator {
+  background: var(--gray-200) !important;
+  border-color: var(--gray-300) !important;
+  color: var(--gray-700) !important;
+}
+
+/* ── Transition on theme switch ── */
+*, *::before, *::after {
+  transition-property: background-color, border-color, color;
+  transition-duration: 200ms;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}

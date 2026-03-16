@@ -86,17 +86,24 @@ const NAV_ITEMS = [
 const COLLAPSED_W = 54;
 const EXPANDED_W = 160;
 const LS_KEY = 'trackpro_nav_expanded';
+const LS_THEME = 'trackpro_theme';
 
 export default function NavBar() {
     const pathname = usePathname();
     const router = useRouter();
     const [expanded, setExpanded] = useState(true);
     const [ready, setReady] = useState(false);
+    const [dark, setDark] = useState(false);
 
     useEffect(() => {
         try {
             const stored = localStorage.getItem(LS_KEY);
             if (stored === 'false') setExpanded(false);
+            const theme = localStorage.getItem(LS_THEME);
+            const isDark = theme === 'dark' ||
+                (!theme && window.matchMedia('(prefers-color-scheme: dark)').matches);
+            setDark(isDark);
+            document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
         } catch (_) { }
         setReady(true);
     }, []);
@@ -107,6 +114,13 @@ export default function NavBar() {
         try { localStorage.setItem(LS_KEY, String(next)); } catch (_) { }
     };
 
+    const toggleTheme = () => {
+        const next = !dark;
+        setDark(next);
+        document.documentElement.setAttribute('data-theme', next ? 'dark' : 'light');
+        try { localStorage.setItem(LS_THEME, next ? 'dark' : 'light'); } catch (_) { }
+    };
+
     const handleLogout = async () => {
         try { await signOut(auth); } catch (_) { }
         router.push('/login');
@@ -114,13 +128,31 @@ export default function NavBar() {
 
     const w = ready ? (expanded ? EXPANDED_W : COLLAPSED_W) : EXPANDED_W;
 
+    // Sun icon (light mode)
+    const SunIcon = (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="5" />
+            <line x1="12" y1="1" x2="12" y2="3" /><line x1="12" y1="21" x2="12" y2="23" />
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" /><line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+            <line x1="1" y1="12" x2="3" y2="12" /><line x1="21" y1="12" x2="23" y2="12" />
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" /><line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+        </svg>
+    );
+
+    // Moon icon (dark mode)
+    const MoonIcon = (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+        </svg>
+    );
+
     return (
         <nav style={{
             width: w,
             minWidth: w,
             height: '100vh',
-            background: 'white',
-            borderRight: '1px solid var(--gray-200)',
+            background: 'var(--nav-bg)',
+            borderRight: '1px solid var(--nav-border)',
             display: 'flex',
             flexDirection: 'column',
             flexShrink: 0,
@@ -137,7 +169,7 @@ export default function NavBar() {
                 flexShrink: 0,
                 overflow: 'hidden',
                 gap: '0.5rem',
-                borderBottom: '1px solid var(--gray-200)',
+                borderBottom: '1px solid var(--nav-border)',
             }}>
                 <div style={{ width: 26, minWidth: 26, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--primary-500)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -149,7 +181,7 @@ export default function NavBar() {
                     </svg>
                 </div>
                 <span style={{
-                    fontSize: '0.9375rem', fontWeight: 500, color: 'var(--gray-800)',
+                    fontSize: '0.9375rem', fontWeight: 500, color: 'var(--nav-text)',
                     letterSpacing: '-0.01em', whiteSpace: 'nowrap',
                     opacity: expanded ? 1 : 0,
                     transform: expanded ? 'translateX(0)' : 'translateX(-8px)',
@@ -180,8 +212,8 @@ export default function NavBar() {
                                 paddingRight: 12,
                                 textDecoration: 'none',
                                 cursor: 'pointer',
-                                background: active ? 'var(--primary-50)' : 'transparent',
-                                color: active ? 'var(--primary-600)' : 'var(--gray-700)',
+                                background: active ? 'var(--nav-active-bg)' : 'transparent',
+                                color: active ? 'var(--primary-500)' : 'var(--nav-text-muted)',
                                 transition: 'background 0.15s, color 0.15s',
                                 overflow: 'hidden',
                                 whiteSpace: 'nowrap',
@@ -192,14 +224,14 @@ export default function NavBar() {
                             }}
                             onMouseEnter={e => {
                                 if (!active) {
-                                    e.currentTarget.style.background = 'var(--gray-100)';
-                                    e.currentTarget.style.color = 'var(--gray-800)';
+                                    e.currentTarget.style.background = 'var(--nav-hover-bg)';
+                                    e.currentTarget.style.color = 'var(--nav-text)';
                                 }
                             }}
                             onMouseLeave={e => {
                                 if (!active) {
                                     e.currentTarget.style.background = 'transparent';
-                                    e.currentTarget.style.color = 'var(--gray-700)';
+                                    e.currentTarget.style.color = 'var(--nav-text-muted)';
                                 }
                             }}
                         >
@@ -222,8 +254,8 @@ export default function NavBar() {
                 })}
             </div>
 
-            {/* Bottom: logout + toggle */}
-            <div style={{ padding: '0.5rem 0', borderTop: '1px solid var(--gray-200)', display: 'flex', flexDirection: 'column', gap: '2px', flexShrink: 0 }}>
+            {/* Bottom: logout + dark toggle + collapse */}
+            <div style={{ padding: '0.5rem 0', borderTop: '1px solid var(--nav-border)', display: 'flex', flexDirection: 'column', gap: '2px', flexShrink: 0 }}>
 
                 {/* Logout */}
                 <button
@@ -234,12 +266,12 @@ export default function NavBar() {
                         borderRadius: '0 20px 20px 0',
                         margin: '0 8px 0 0', paddingLeft: 14, paddingRight: 12,
                         cursor: 'pointer', background: 'transparent',
-                        color: 'var(--gray-700)', border: 'none', fontFamily: 'inherit',
+                        color: 'var(--nav-text-muted)', border: 'none', fontFamily: 'inherit',
                         gap: '0.625rem', overflow: 'hidden', whiteSpace: 'nowrap', flexShrink: 0,
                         transition: 'background 0.15s, color 0.15s',
                     }}
                     onMouseEnter={e => { e.currentTarget.style.background = 'var(--danger-50)'; e.currentTarget.style.color = 'var(--danger-600)'; }}
-                    onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--gray-700)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--nav-text-muted)'; }}
                 >
                     <span style={{ width: 20, minWidth: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -257,7 +289,63 @@ export default function NavBar() {
                     }}>Logout</span>
                 </button>
 
-                {/* Toggle */}
+                {/* Dark mode toggle */}
+                <button
+                    title={dark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+                    onClick={toggleTheme}
+                    style={{
+                        display: 'flex', alignItems: 'center', height: 38,
+                        borderRadius: '0 20px 20px 0',
+                        margin: '0 8px 0 0', paddingLeft: 14, paddingRight: 12,
+                        cursor: 'pointer', background: 'transparent',
+                        color: 'var(--nav-text-muted)', border: 'none', fontFamily: 'inherit',
+                        gap: '0.625rem', overflow: 'hidden', whiteSpace: 'nowrap', flexShrink: 0,
+                        transition: 'background 0.15s, color 0.15s',
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.background = 'var(--nav-hover-bg)'; e.currentTarget.style.color = 'var(--nav-text)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--nav-text-muted)'; }}
+                >
+                    {/* Toggle track */}
+                    <span style={{
+                        width: 20, minWidth: 20, display: 'flex', alignItems: 'center',
+                        justifyContent: 'center', flexShrink: 0,
+                        color: dark ? 'var(--warning-500)' : 'var(--gray-500)',
+                        transition: 'color 0.2s',
+                    }}>
+                        {dark ? MoonIcon : SunIcon}
+                    </span>
+                    {/* Label + inline toggle switch */}
+                    <span style={{
+                        display: 'flex', alignItems: 'center', gap: '0.5rem',
+                        opacity: expanded ? 1 : 0,
+                        transform: expanded ? 'translateX(0)' : 'translateX(-6px)',
+                        transition: 'opacity 0.16s ease, transform 0.16s ease',
+                        pointerEvents: 'none', whiteSpace: 'nowrap', flex: 1,
+                    }}>
+                        <span style={{ fontSize: '0.8125rem', fontWeight: 400 }}>
+                            {dark ? 'Dark' : 'Light'}
+                        </span>
+                        {/* Switch pill */}
+                        <span style={{
+                            width: 28, height: 16, borderRadius: 8,
+                            background: dark ? 'var(--primary-500)' : 'var(--gray-300)',
+                            display: 'inline-flex', alignItems: 'center',
+                            padding: '2px',
+                            transition: 'background 0.22s',
+                            flexShrink: 0, marginLeft: 'auto',
+                        }}>
+                            <span style={{
+                                width: 12, height: 12, borderRadius: '50%',
+                                background: 'white',
+                                transform: dark ? 'translateX(12px)' : 'translateX(0)',
+                                transition: 'transform 0.22s cubic-bezier(0.4,0,0.2,1)',
+                                display: 'block',
+                            }} />
+                        </span>
+                    </span>
+                </button>
+
+                {/* Collapse toggle */}
                 <button
                     onClick={toggle}
                     title={expanded ? 'Collapse sidebar' : 'Expand sidebar'}
@@ -266,11 +354,11 @@ export default function NavBar() {
                         borderRadius: '0 20px 20px 0',
                         margin: '0 8px 0 0', paddingLeft: 14, paddingRight: 12,
                         cursor: 'pointer', background: 'transparent',
-                        color: 'var(--gray-700)', border: 'none', fontFamily: 'inherit',
+                        color: 'var(--nav-text-muted)', border: 'none', fontFamily: 'inherit',
                         gap: '0.625rem', overflow: 'hidden', whiteSpace: 'nowrap', flexShrink: 0,
                         transition: 'background 0.15s, color 0.15s',
                     }}
-                    onMouseEnter={e => { e.currentTarget.style.background = 'var(--gray-100)'; }}
+                    onMouseEnter={e => { e.currentTarget.style.background = 'var(--nav-hover-bg)'; }}
                     onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
                 >
                     <span style={{
