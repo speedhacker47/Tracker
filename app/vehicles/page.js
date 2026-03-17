@@ -424,7 +424,7 @@ export default function VehiclesPage() {
                                                                     <circle cx="12" cy="12" r="3" /><path d="M12 2v4" /><path d="M12 18v4" /><path d="M4.93 4.93l2.83 2.83" /><path d="M16.24 16.24l2.83 2.83" /><path d="M2 12h4" /><path d="M18 12h4" /><path d="M4.93 19.07l2.83-2.83" /><path d="M16.24 7.76l2.83-2.83" />
                                                                 </svg>
                                                             </button>
-                                                            <button
+                                                            {/* <button
                                                                 title="Route history"
                                                                 onClick={e => { e.stopPropagation(); router.push('/history'); }}
                                                                 style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--gray-500)', borderRadius: 'var(--radius-sm)', transition: 'color var(--transition-fast), background var(--transition-fast)' }}
@@ -434,7 +434,7 @@ export default function VehiclesPage() {
                                                                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                                                     <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
                                                                 </svg>
-                                                            </button>
+                                                            </button> */}
                                                             <button
                                                                 title="Full details"
                                                                 onClick={e => { e.stopPropagation(); router.push(`/vehicles/${v.id}`); }}
