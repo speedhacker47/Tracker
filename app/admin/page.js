@@ -265,7 +265,7 @@ export default function AdminPage() {
                         </div>
                         <div>
                             <h1 style={{ fontSize: '1.0625rem', fontWeight: 700, color: 'var(--gray-900)' }}>Master Admin</h1>
-                            <p style={{ fontSize: '0.75rem', color: 'var(--gray-400)' }}>TrackPro fleet management</p>
+                            <p style={{ fontSize: '0.75rem', color: 'var(--gray-400)' }}>tracker fleet management</p>
                         </div>
                     </div>
                     <button onClick={() => { setShowAddDevices(true); }} style={{ height: 36, padding: '0 1rem', background: 'linear-gradient(135deg, #1e3a5f, #2563eb)', color: 'white', border: 'none', borderRadius: 8, fontSize: '0.8125rem', fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.375rem' }}>

@@ -85,8 +85,8 @@ const NAV_ITEMS = [
 
 const COLLAPSED_W = 54;
 const EXPANDED_W = 230;
-const LS_KEY = 'trackpro_nav_expanded';
-const LS_THEME = 'trackpro_theme';
+const LS_KEY = 'tracker_nav_expanded';
+const LS_THEME = 'tracker_theme';
 
 export default function NavBar() {
     const pathname = usePathname();
@@ -188,7 +188,7 @@ export default function NavBar() {
                     transition: 'opacity 0.18s ease, transform 0.18s ease',
                     userSelect: 'none',
                 }}>
-                    TrackPro
+                    tracker
                 </span>
             </div>
 

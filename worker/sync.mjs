@@ -35,18 +35,18 @@ async function sync() {
         const pipeline = redis.pipeline();
 
         // All positions — 10s TTL (worker refreshes every 5s, so never expires in normal operation)
-        pipeline.set('trackpro:positions', JSON.stringify(positions), 'EX', 10);
+        pipeline.set('tracker:positions', JSON.stringify(positions), 'EX', 10);
 
         // All devices — 30s TTL
-        pipeline.set('trackpro:devices', JSON.stringify(devices), 'EX', 30);
+        pipeline.set('tracker:devices', JSON.stringify(devices), 'EX', 30);
 
         // Per-device positions for fast single-device lookups
         for (const pos of positions) {
-            pipeline.set(`trackpro:position:${pos.deviceId}`, JSON.stringify(pos), 'EX', 30);
+            pipeline.set(`tracker:position:${pos.deviceId}`, JSON.stringify(pos), 'EX', 30);
         }
 
         // Worker heartbeat — lets you monitor if worker is alive
-        pipeline.set('trackpro:worker:heartbeat', Date.now(), 'EX', 15);
+        pipeline.set('tracker:worker:heartbeat', Date.now(), 'EX', 15);
 
         await pipeline.exec();
 

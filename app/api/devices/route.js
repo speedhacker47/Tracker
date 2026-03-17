@@ -31,7 +31,7 @@ export async function GET(request) {
         }
 
         // Read all devices from Redis (written by sync worker every 30s)
-        const cached = await redis.get('trackpro:devices');
+        const cached = await redis.get('tracker:devices');
         if (!cached) return NextResponse.json([]);
 
         const allDevices = JSON.parse(cached);

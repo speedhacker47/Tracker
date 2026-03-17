@@ -1,8 +1,8 @@
 import './globals.css';
 
 export const metadata = {
-    title: 'TrackPro — GPS Vehicle Tracking',
-    description: 'Professional GPS vehicle tracking and fleet management platform. Monitor your vehicles in real-time with TrackPro.',
+    title: 'tracker — GPS Vehicle Tracking',
+    description: 'Professional GPS vehicle tracking and fleet management platform. Monitor your vehicles in real-time with tracker.',
     keywords: 'GPS tracking, vehicle tracking, fleet management, live tracking',
 };
 

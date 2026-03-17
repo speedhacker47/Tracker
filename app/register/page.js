@@ -94,7 +94,7 @@ function RegisterContent() {
                             <path d="M4.93 19.07l2.83-2.83" /><path d="M16.24 7.76l2.83-2.83" />
                         </svg>
                     </div>
-                    <div style={{ fontSize: '1.875rem', fontWeight: 800, color: 'white', letterSpacing: '-0.03em' }}>TrackPro</div>
+                    <div style={{ fontSize: '1.875rem', fontWeight: 800, color: 'white', letterSpacing: '-0.03em' }}>tracker</div>
                     <div style={{ fontSize: '0.875rem', color: 'rgba(255,255,255,0.55)', marginTop: '0.375rem' }}>GPS Fleet Tracking</div>
                 </div>
 

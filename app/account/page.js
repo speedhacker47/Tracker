@@ -347,7 +347,7 @@ export default function AccountPage() {
                             {/* Info */}
                             <div style={{ flex: 1 }}>
                                 <div style={{ fontSize: '1rem', fontWeight: 400, color: 'var(--gray-800)', lineHeight: 1.2, marginBottom: '0.25rem' }}>
-                                    {user?.displayName || user?.phoneNumber || user?.email || 'TrackPro User'}
+                                    {user?.displayName || user?.phoneNumber || user?.email || 'tracker User'}
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
                                     <span style={{
@@ -437,7 +437,7 @@ export default function AccountPage() {
 
                                     <div style={{ borderTop: '1px solid var(--gray-100)', paddingTop: '1rem', marginTop: '0.5rem' }}>
                                         <div style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--gray-700)', marginBottom: '0.375rem' }}>Session</div>
-                                        <div style={{ fontSize: '0.8125rem', color: 'var(--gray-500)', marginBottom: '0.75rem' }}>Sign out of TrackPro on this device.</div>
+                                        <div style={{ fontSize: '0.8125rem', color: 'var(--gray-500)', marginBottom: '0.75rem' }}>Sign out of tracker on this device.</div>
                                         <button onClick={handleLogout} disabled={loggingOut}
                                             style={{
                                                 height: 34, padding: '0 1rem', fontSize: '0.8125rem', fontWeight: 600,
@@ -532,9 +532,9 @@ export default function AccountPage() {
                             display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.875rem',
                         }}>
                             {[
-                                { label: 'Platform', value: 'TrackPro Fleet' },
+                                { label: 'Platform', value: 'tracker Fleet' },
                                 { label: 'Version', value: '1.0.0' },
-                                { label: 'Support', value: 'support@trackpro.in' },
+                                { label: 'Support', value: 'support@tracker.in' },
                             ].map(item => (
                                 <div key={item.label} style={{
                                     background: 'white', border: '1px solid var(--gray-200)',

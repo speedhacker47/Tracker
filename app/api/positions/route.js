@@ -23,7 +23,7 @@ export async function GET(request) {
         if (clientDeviceIds.size === 0) return NextResponse.json([]);
 
         // Read from Redis — written by sync worker every 5s
-        const cached = await redis.get('trackpro:positions');
+        const cached = await redis.get('tracker:positions');
         if (!cached) return NextResponse.json([]);
 
         const positions = JSON.parse(cached);

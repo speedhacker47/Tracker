@@ -76,7 +76,7 @@ function LoginContent() {
                             <path d="M2 12h4" /><path d="M18 12h4" />
                             <path d="M4.93 19.07l2.83-2.83" /><path d="M16.24 7.76l2.83-2.83" />
                         </svg>
-                        <span style={{ fontSize: '1.25rem', fontWeight: 500, color: 'var(--gray-800)' }}>TrackPro</span>
+                        <span style={{ fontSize: '1.25rem', fontWeight: 500, color: 'var(--gray-800)' }}>tracker</span>
                     </div>
                     <div style={{ fontSize: '0.875rem', color: 'var(--gray-600)' }}>GPS Fleet Tracking</div>
                 </div>
@@ -185,7 +185,7 @@ function LoginContent() {
                 </div>
 
                 <div style={{ textAlign: 'center', marginTop: '1.5rem', fontSize: '0.75rem', color: 'var(--gray-500)' }}>
-                    © 2026 TrackPro. All rights reserved.
+                    © 2026 tracker. All rights reserved.
                 </div>
             </div>
         </div>
