@@ -4,7 +4,7 @@
  * Runs every 30s. For each active device:
  *   1. Detect stops (6+ consecutive points within 20m = ~60s at 10s intervals)
  *   2. Close stops when vehicle departs → create pending segments
- *   3. Process pending segments: snap to roads via OSRM /match → insert points
+ *   3. Process pending segments: snap to roads via Google Roads API → insert points
  *
  * Reads from Traccar's tc_positions (read-only).
  * Writes to our journey_stops, journey_segments, journey_segment_points tables.
@@ -19,13 +19,13 @@ const { Pool } = pg;
 const DATABASE_URL       = process.env.DATABASE_URL || '';
 const REDIS_HOST         = process.env.REDIS_HOST || 'redis';
 const REDIS_PORT         = Number(process.env.REDIS_PORT) || 6379;
-const OSRM_URL           = process.env.OSRM_URL || 'http://osrm:5000';
+const GOOGLE_ROADS_KEY   = process.env.GOOGLE_ROADS_API_KEY || '';
 const PROCESS_INTERVAL   = Number(process.env.JOURNEY_INTERVAL_MS) || 30000;
 
 // Stop detection: 6 consecutive points within 20m radius (~60s at 10s GPS interval)
 const STOP_POINT_COUNT   = 6;
 const STOP_RADIUS_M      = 20;
-const SNAP_BATCH_SIZE    = 100;   // OSRM recommended max per match request
+const SNAP_BATCH_SIZE    = 100;   // Google Roads API max 100 points per request
 const MAX_RETRY_COUNT    = 3;
 
 // ── Connections ───────────────────────────────────────────────────────────────
@@ -70,9 +70,10 @@ function pointsWithinRadius(points, radiusM) {
     return points.every(p => haversineM(cLat, cLon, p.latitude, p.longitude) <= radiusM);
 }
 
-// ── OSRM Map Matching: /match endpoint ─────────────────────────────────────────
+// ── Google Roads API: snapToRoads ──────────────────────────────────────────────
 async function snapToRoads(points) {
-    if (points.length < 2) {
+    if (!GOOGLE_ROADS_KEY) {
+        console.warn('[journey] No GOOGLE_ROADS_API_KEY — using raw points');
         return points.map((p, i) => ({
             latitude: p.latitude, longitude: p.longitude,
             timestamp: p.fixtime, sequence: i,
@@ -81,91 +82,43 @@ async function snapToRoads(points) {
 
     const results = [];
 
-    // Batch into groups of SNAP_BATCH_SIZE (OSRM default max ~100 per match)
+    // Google Roads allows max 100 points per request
     for (let i = 0; i < points.length; i += SNAP_BATCH_SIZE) {
         const batch = points.slice(i, Math.min(i + SNAP_BATCH_SIZE, points.length));
-
-        if (batch.length < 2) {
-            // Single point left — just use raw
-            for (const p of batch) {
-                results.push({ latitude: p.latitude, longitude: p.longitude, timestamp: p.fixtime });
-            }
-            continue;
-        }
-
-        // OSRM uses lng,lat order (opposite of Google)
-        const coords = batch.map(p => `${p.longitude},${p.latitude}`).join(';');
-        // Unix timestamps for temporal matching (helps OSRM disambiguate U-turns etc.)
-        const timestamps = batch.map(p => Math.floor(new Date(p.fixtime).getTime() / 1000)).join(';');
-        // Radius per point — 25m tolerance for GPS noise
-        const radiuses = batch.map(() => '25').join(';');
-
-        const url = `${OSRM_URL}/match/v1/driving/${coords}?overview=full&geometries=geojson&timestamps=${timestamps}&radiuses=${radiuses}&gaps=split`;
+        const pathStr = batch.map(p => `${p.latitude},${p.longitude}`).join('|');
+        const url = `https://roads.googleapis.com/v1/snapToRoads?path=${pathStr}&interpolate=true&key=${GOOGLE_ROADS_KEY}`;
 
         const res = await fetch(url);
         if (!res.ok) {
             const text = await res.text();
-            throw new Error(`OSRM match ${res.status}: ${text}`);
+            throw new Error(`Roads API ${res.status}: ${text}`);
         }
 
         const data = await res.json();
 
-        if (data.code !== 'Ok' || !data.matchings || data.matchings.length === 0) {
+        if (!data.snappedPoints || data.snappedPoints.length === 0) {
             // Fallback: use raw points for this batch
-            console.warn(`[journey] OSRM match returned no matchings — using raw points`);
+            console.warn('[journey] Roads API returned no snapped points — using raw');
             for (const p of batch) {
                 results.push({ latitude: p.latitude, longitude: p.longitude, timestamp: p.fixtime });
             }
-            continue;
-        }
-
-        // Start / end timestamps for this batch (used to distribute timestamps)
-        const batchStartMs = new Date(batch[0].fixtime).getTime();
-        const batchEndMs = new Date(batch[batch.length - 1].fixtime).getTime();
-        const batchDurationMs = batchEndMs - batchStartMs;
-
-        // Collect all geometry coordinates from all matchings
-        // (OSRM may split into multiple matchings if there are gaps)
-        let allCoords = [];
-        let totalGeomDistance = 0;
-
-        for (const matching of data.matchings) {
-            if (!matching.geometry?.coordinates) continue;
-            const geomCoords = matching.geometry.coordinates; // [[lng, lat], ...]
-
-            // Calculate cumulative distance for proportional timestamp assignment
-            let segDist = 0;
-            for (let j = 1; j < geomCoords.length; j++) {
-                segDist += haversineM(geomCoords[j - 1][1], geomCoords[j - 1][0],
-                                      geomCoords[j][1], geomCoords[j][0]);
-            }
-
-            for (let j = 0; j < geomCoords.length; j++) {
-                allCoords.push({
-                    lat: geomCoords[j][1],   // GeoJSON is [lng, lat]
-                    lng: geomCoords[j][0],
-                    distOffset: totalGeomDistance + (j > 0 ?
-                        haversineM(geomCoords[j - 1][1], geomCoords[j - 1][0],
-                                   geomCoords[j][1], geomCoords[j][0]) : 0),
-                });
-                if (j > 0) {
-                    totalGeomDistance += haversineM(
-                        geomCoords[j - 1][1], geomCoords[j - 1][0],
-                        geomCoords[j][1], geomCoords[j][0]
-                    );
+        } else {
+            for (const sp of data.snappedPoints) {
+                // Determine timestamp from originalIndex
+                const origIdx = sp.originalIndex;
+                let ts;
+                if (origIdx !== undefined && origIdx !== null && batch[origIdx]) {
+                    ts = batch[origIdx].fixtime;
+                } else {
+                    // Interpolated point — use last known timestamp
+                    ts = results.length > 0 ? results[results.length - 1].timestamp : batch[0].fixtime;
                 }
+                results.push({
+                    latitude: sp.location.latitude,
+                    longitude: sp.location.longitude,
+                    timestamp: ts,
+                });
             }
-        }
-
-        // Assign timestamps proportionally based on cumulative distance
-        for (const c of allCoords) {
-            const frac = totalGeomDistance > 0 ? c.distOffset / totalGeomDistance : 0;
-            const ts = new Date(batchStartMs + frac * batchDurationMs);
-            results.push({
-                latitude: c.lat,
-                longitude: c.lng,
-                timestamp: ts.toISOString(),
-            });
         }
     }
 
@@ -408,7 +361,7 @@ async function tick() {
 // ── Boot ──────────────────────────────────────────────────────────────────────
 console.log('[journey] Starting journey processor...');
 console.log(`[journey] Interval: ${PROCESS_INTERVAL}ms, Stop: ${STOP_POINT_COUNT} pts within ${STOP_RADIUS_M}m`);
-console.log(`[journey] OSRM endpoint: ${OSRM_URL}`);
+console.log(`[journey] Roads API: ${GOOGLE_ROADS_KEY ? 'configured ✓' : '⚠ NOT SET — will use raw points'}`);
 
 tick();
 setInterval(tick, PROCESS_INTERVAL);
