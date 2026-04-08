@@ -3,6 +3,11 @@
 import { useEffect, useRef, useMemo, useState, useCallback } from 'react';
 import { GoogleMap, useJsApiLoader, MarkerF, InfoWindowF } from '@react-google-maps/api';
 
+// IMPORTANT: Must match HistoryMap.js exactly. The Google Maps loader throws
+// "Loader must not be called again with different options" if two components
+// call useJsApiLoader with the same id but different libraries.
+const GOOGLE_MAPS_LIBRARIES = ['geometry', 'marker'];
+
 // Status colors matching the design system
 const STATUS_COLORS = {
     online: '#22c55e',
@@ -74,7 +79,8 @@ const mapContainerStyle = {
 export default function Map({ vehicles, selectedVehicle, onVehicleSelect }) {
     const { isLoaded } = useJsApiLoader({
         id: 'google-map-script',
-        googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ''
+        googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '',
+        libraries: GOOGLE_MAPS_LIBRARIES,
     });
 
     const [map, setMap] = useState(null);
