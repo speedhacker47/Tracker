@@ -73,7 +73,7 @@ function formatTime(isoStr) {
 // ── Component ─────────────────────────────────────────────────────────────────
 
 const JourneyMap = forwardRef(function JourneyMap(
-    { segments, stops, playbackState, onPlaybackTick },
+    { segments, stops, playbackState, onPlaybackTick, autoFollow },
     ref
 ) {
     const { isLoaded } = useJsApiLoader({
@@ -101,6 +101,10 @@ const JourneyMap = forwardRef(function JourneyMap(
 
     // Build flat point array from all segments (for animation)
     const allPoints = useRef([]);
+    const cumDistKm = useRef([]); // cumulative km at each point index
+    const autoFollowRef = useRef(autoFollow);
+    useEffect(() => { autoFollowRef.current = autoFollow; }, [autoFollow]);
+
     useEffect(() => {
         const pts = [];
         for (const seg of segments) {
@@ -109,6 +113,20 @@ const JourneyMap = forwardRef(function JourneyMap(
             }
         }
         allPoints.current = pts;
+
+        // Compute cumulative distance (Haversine)
+        const cum = [0];
+        for (let i = 1; i < pts.length; i++) {
+            const R = 6371;
+            const dLat = (pts[i].lat - pts[i-1].lat) * Math.PI / 180;
+            const dLon = (pts[i].lng - pts[i-1].lng) * Math.PI / 180;
+            const a = Math.sin(dLat/2)**2 +
+                Math.cos(pts[i-1].lat * Math.PI/180) * Math.cos(pts[i].lat * Math.PI/180) *
+                Math.sin(dLon/2)**2;
+            const d = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            cum.push(cum[i-1] + d);
+        }
+        cumDistKm.current = cum;
     }, [segments]);
 
     const updateArrow = useCallback((map, idx) => {
@@ -329,6 +347,12 @@ const JourneyMap = forwardRef(function JourneyMap(
                 updateArrow(map, currentIdxRef.current);
                 updateTrail(currentIdxRef.current);
 
+                // Auto-follow: pan map to vehicle position
+                if (autoFollowRef.current) {
+                    const ap = allPoints.current[currentIdxRef.current];
+                    if (ap) map.panTo({ lat: ap.lat, lng: ap.lng });
+                }
+
                 // Report index back to parent
                 if (onPlaybackTick) onPlaybackTick(currentIdxRef.current);
 
@@ -356,7 +380,7 @@ const JourneyMap = forwardRef(function JourneyMap(
         seekTo(idx) {
             if (!mapRef.current || allPoints.current.length === 0) return;
             const safeIdx = Math.max(0, Math.min(idx, allPoints.current.length - 1));
-            currentIdxRef.current = safeIdx; // keep ref in sync
+            currentIdxRef.current = safeIdx;
             updateArrow(mapRef.current, safeIdx);
             updateTrail(safeIdx);
             const pt = allPoints.current[safeIdx];
@@ -365,6 +389,18 @@ const JourneyMap = forwardRef(function JourneyMap(
         getPointCount() { return allPoints.current.length; },
         getPointTimestamp(idx) {
             return allPoints.current[idx]?.timestamp;
+        },
+        getPointSpeed(idx) {
+            // speed stored in knots; return km/h
+            const s = allPoints.current[idx]?.speed;
+            return s != null ? Math.round(s * 1.852) : null;
+        },
+        getDistanceAtPoint(idx) {
+            return cumDistKm.current[idx] ?? null;
+        },
+        getTotalDistance() {
+            const len = cumDistKm.current.length;
+            return len > 0 ? cumDistKm.current[len - 1] : 0;
         },
         findPointByTime(timestamp) {
             const t = new Date(timestamp).getTime();

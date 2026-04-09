@@ -66,6 +66,10 @@ export default function JourneyPage() {
     const [playbackSpeed, setPlaybackSpeed] = useState(1);
     const [pointIndex, setPointIndex] = useState(0);
     const [currentTime, setCurrentTime] = useState(null);
+    const [currentSpeed, setCurrentSpeed] = useState(null);   // km/h at current point
+    const [autoFollow, setAutoFollow] = useState(true);       // camera follows arrow
+    const [distanceTravelled, setDistanceTravelled] = useState(0); // km so far
+    const activeStopRowRefs = useRef({});  // keyed by stop index
 
     // ── Default date = today ──────────────────────────────────────────────
     useEffect(() => {
@@ -147,10 +151,14 @@ export default function JourneyPage() {
             return;
         }
         setPointIndex(idx);
-        // Update current time from the point's timestamp
+        // Update current time, speed, and distance from the point's data
         if (mapRef.current) {
             const ts = mapRef.current.getPointTimestamp(idx);
             if (ts) setCurrentTime(ts);
+            const spd = mapRef.current.getPointSpeed(idx);
+            setCurrentSpeed(spd);
+            const dist = mapRef.current.getDistanceAtPoint(idx);
+            if (dist != null) setDistanceTravelled(dist);
         }
     }, []);
 
@@ -162,6 +170,10 @@ export default function JourneyPage() {
         setPointIndex(idx);
         setCurrentTime(timestamp.toISOString());
         mapRef.current.seekTo(idx);
+        const spd = mapRef.current.getPointSpeed(idx);
+        setCurrentSpeed(spd);
+        const dist = mapRef.current.getDistanceAtPoint(idx);
+        if (dist != null) setDistanceTravelled(dist);
     }, []);
 
     // ── Toggle play ───────────────────────────────────────────────────────
@@ -181,6 +193,27 @@ export default function JourneyPage() {
     const totalPoints = segments.reduce((s, seg) => s + seg.points.length, 0);
     const hasData = segments.length > 0 || stops.length > 0;
     const selectedDeviceObj = devices.find(d => String(d.id) === selectedDevice);
+
+    // Active stop: the stop whose time window contains currentTime
+    const activeStopIdx = currentTime
+        ? stops.findIndex(st => {
+            const t = new Date(currentTime).getTime();
+            const arr = st.arrivedAt ? new Date(st.arrivedAt).getTime() : null;
+            const dep = st.departedAt ? new Date(st.departedAt).getTime() : null;
+            return arr && dep && t >= arr && t <= dep;
+          })
+        : -1;
+
+    // Distance remaining (from cumulative map distance)
+    const totalDistKm = mapRef.current?.getTotalDistance?.() ?? 0;
+    const distanceRemaining = Math.max(0, totalDistKm - distanceTravelled);
+
+    // Scroll active stop into view
+    useEffect(() => {
+        if (activeStopIdx >= 0 && activeStopRowRefs.current[activeStopIdx]) {
+            activeStopRowRefs.current[activeStopIdx].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        }
+    }, [activeStopIdx]);
 
     // ── Keyboard shortcuts (Space = play/pause, ←/→ = step frame) ────────
     // NOTE: must be declared AFTER hasData to avoid TDZ in production builds.
@@ -438,6 +471,25 @@ export default function JourneyPage() {
                                         </button>
                                     </div>
 
+                                    {/* ── Auto-follow toggle ── */}
+                                    <button
+                                        title={autoFollow ? 'Auto-follow ON — click to free-pan' : 'Auto-follow OFF — click to re-lock camera'}
+                                        onClick={() => setAutoFollow(p => !p)}
+                                        style={{
+                                            alignSelf: 'center', marginTop: '0.375rem',
+                                            display: 'inline-flex', alignItems: 'center', gap: '0.35rem',
+                                            fontSize: '0.6875rem', fontWeight: 500,
+                                            padding: '0.25rem 0.625rem', borderRadius: 'var(--radius-sm)',
+                                            background: autoFollow ? 'var(--primary-50)' : 'var(--gray-50)',
+                                            border: `1px solid ${autoFollow ? 'var(--primary-300)' : 'var(--gray-200)'}`,
+                                            color: autoFollow ? 'var(--primary-600)' : 'var(--gray-500)',
+                                            cursor: 'pointer', transition: 'all 0.15s ease',
+                                        }}
+                                    >
+                                        {autoFollow ? '📍' : '🔓'}
+                                        {autoFollow ? 'Camera: Following' : 'Camera: Free'}
+                                    </button>
+
                                     {/* ── Keyboard hint ── */}
                                     <div style={{ textAlign: 'center', fontSize: '0.575rem', color: 'var(--gray-400)', lineHeight: 1.6 }}>
                                         <kbd style={{ background: 'var(--gray-100)', border: '1px solid var(--gray-300)', borderRadius: 3, padding: '0 3px', fontSize: 'inherit' }}>Space</kbd>
@@ -459,8 +511,11 @@ export default function JourneyPage() {
                                         Stops ({stops.length})
                                     </div>
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem', maxHeight: 240, overflowY: 'auto' }}>
-                                        {stops.map((st, i) => (
+                                        {stops.map((st, i) => {
+                                            const isActive = i === activeStopIdx;
+                                            return (
                                             <button key={st.id || i}
+                                                ref={el => { activeStopRowRefs.current[i] = el; }}
                                                 onClick={() => {
                                                     setIsPlaying(false);
                                                     if (mapRef.current) {
@@ -468,20 +523,25 @@ export default function JourneyPage() {
                                                         setPointIndex(idx);
                                                         setCurrentTime(st.arrivedAt);
                                                         mapRef.current.seekTo(idx);
+                                                        const spd = mapRef.current.getPointSpeed(idx);
+                                                        setCurrentSpeed(spd);
                                                     }
                                                 }}
                                                 style={{
                                                     display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                                                     padding: '0.5rem 0.625rem', borderRadius: 'var(--radius-sm)',
-                                                    background: 'var(--gray-50)', border: '1px solid var(--gray-200)',
+                                                    background: isActive ? '#fef2f2' : 'var(--gray-50)',
+                                                    border: `1px solid ${isActive ? '#fca5a5' : 'var(--gray-200)'}`,
                                                     cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
-                                                    transition: 'background 0.15s ease',
+                                                    transition: 'background 0.15s ease, border-color 0.15s ease',
+                                                    outline: isActive ? '2px solid #ef4444' : 'none',
+                                                    outlineOffset: -1,
                                                 }}
                                             >
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#ea4335', display: 'inline-block', flexShrink: 0 }} />
+                                                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: isActive ? '#ef4444' : '#ea4335', display: 'inline-block', flexShrink: 0, boxShadow: isActive ? '0 0 0 3px rgba(239,68,68,0.25)' : 'none', transition: 'box-shadow 0.2s' }} />
                                                     <div>
-                                                        <div style={{ fontSize: '0.8125rem', color: 'var(--gray-800)', fontWeight: 500 }}>
+                                                        <div style={{ fontSize: '0.8125rem', color: isActive ? '#b91c1c' : 'var(--gray-800)', fontWeight: isActive ? 600 : 500 }}>
                                                             {formatTime(st.arrivedAt)} → {formatTime(st.departedAt)}
                                                         </div>
                                                         <div style={{ fontSize: '0.6875rem', color: 'var(--gray-500)' }}>
@@ -489,11 +549,12 @@ export default function JourneyPage() {
                                                         </div>
                                                     </div>
                                                 </div>
-                                                <span style={{ fontSize: '0.75rem', color: 'var(--gray-600)', fontWeight: 500, whiteSpace: 'nowrap' }}>
+                                                <span style={{ fontSize: '0.75rem', color: isActive ? '#b91c1c' : 'var(--gray-600)', fontWeight: 500, whiteSpace: 'nowrap' }}>
                                                     {formatDuration(st.durationSeconds)}
                                                 </span>
                                             </button>
-                                        ))}
+                                            );
+                                        })}
                                     </div>
                                 </div>
                             )}
@@ -574,6 +635,7 @@ export default function JourneyPage() {
                             stops={stops}
                             playbackState={{ isPlaying, speed: playbackSpeed, pointIndex }}
                             onPlaybackTick={handlePlaybackTick}
+                            autoFollow={autoFollow}
                         />
                     ) : (
                         <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--gray-500)' }}>
@@ -628,25 +690,71 @@ export default function JourneyPage() {
                         </div>
                     )}
 
-                    {/* Playback time overlay — bottom-left of map */}
+                    {/* Playback time + speed overlay — bottom-left of map */}
                     {hasData && currentTime && (
                         <div style={{
                             position: 'absolute', bottom: '1.5rem', left: '1rem', zIndex: 1000,
-                            background: 'rgba(26, 115, 232, 0.90)',
-                            backdropFilter: 'blur(8px)',
-                            WebkitBackdropFilter: 'blur(8px)',
+                            display: 'flex', alignItems: 'stretch', gap: 0,
                             borderRadius: 'var(--radius-md)',
-                            padding: '0.375rem 0.75rem',
                             boxShadow: '0 2px 8px rgba(0,0,0,0.25)',
-                            color: 'white',
+                            overflow: 'hidden',
                             userSelect: 'none',
                         }}>
-                            <div style={{ fontSize: '0.55rem', opacity: 0.8, textTransform: 'uppercase', letterSpacing: '0.07em' }}>
-                                {isPlaying ? '▶ Playing' : '⏸ Paused'}
+                            {/* Time block */}
+                            <div style={{
+                                background: 'rgba(26, 115, 232, 0.90)',
+                                backdropFilter: 'blur(8px)',
+                                WebkitBackdropFilter: 'blur(8px)',
+                                padding: '0.375rem 0.75rem',
+                                color: 'white',
+                            }}>
+                                <div style={{ fontSize: '0.55rem', opacity: 0.8, textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+                                    {isPlaying ? '▶ Playing' : '⏸ Paused'}
+                                </div>
+                                <div style={{ fontSize: '1.0625rem', fontWeight: 700, fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.02em', lineHeight: 1.2 }}>
+                                    {new Date(currentTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                                </div>
                             </div>
-                            <div style={{ fontSize: '1.0625rem', fontWeight: 700, fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.02em', lineHeight: 1.2 }}>
-                                {new Date(currentTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-                            </div>
+                            {/* Speed block */}
+                            {currentSpeed != null && (
+                                <div style={{
+                                    background: currentSpeed > 80 ? 'rgba(220,38,38,0.88)'
+                                              : currentSpeed > 40 ? 'rgba(234,88,12,0.88)'
+                                              : 'rgba(5,150,105,0.88)',
+                                    backdropFilter: 'blur(8px)',
+                                    WebkitBackdropFilter: 'blur(8px)',
+                                    padding: '0.375rem 0.75rem',
+                                    color: 'white',
+                                    borderLeft: '1px solid rgba(255,255,255,0.2)',
+                                    minWidth: 60,
+                                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                                }}>
+                                    <div style={{ fontSize: '0.55rem', opacity: 0.8, textTransform: 'uppercase', letterSpacing: '0.07em' }}>Speed</div>
+                                    <div style={{ fontSize: '1.0625rem', fontWeight: 700, fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.02em', lineHeight: 1.2 }}>
+                                        {currentSpeed}
+                                    </div>
+                                    <div style={{ fontSize: '0.5rem', opacity: 0.8, letterSpacing: '0.04em' }}>km/h</div>
+                                </div>
+                            )}
+                            {/* Distance remaining block */}
+                            {totalDistKm > 0 && (
+                                <div style={{
+                                    background: 'rgba(15,23,42,0.82)',
+                                    backdropFilter: 'blur(8px)',
+                                    WebkitBackdropFilter: 'blur(8px)',
+                                    padding: '0.375rem 0.75rem',
+                                    color: 'white',
+                                    borderLeft: '1px solid rgba(255,255,255,0.1)',
+                                    minWidth: 64,
+                                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                                }}>
+                                    <div style={{ fontSize: '0.55rem', opacity: 0.7, textTransform: 'uppercase', letterSpacing: '0.07em' }}>Remaining</div>
+                                    <div style={{ fontSize: '1.0625rem', fontWeight: 700, fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.02em', lineHeight: 1.2 }}>
+                                        {distanceRemaining < 1 ? `${Math.round(distanceRemaining * 1000)}m` : `${distanceRemaining.toFixed(1)}`}
+                                    </div>
+                                    {distanceRemaining >= 1 && <div style={{ fontSize: '0.5rem', opacity: 0.7, letterSpacing: '0.04em' }}>km</div>}
+                                </div>
+                            )}
                         </div>
                     )}
 
