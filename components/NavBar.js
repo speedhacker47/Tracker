@@ -9,57 +9,27 @@ const NAV_ITEMS = [
     {
         label: 'Live Tracking',
         href: '/dashboard',
-        icon: (
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="3" />
-                <path d="M12 2v4" /><path d="M12 18v4" />
-                <path d="M4.93 4.93l2.83 2.83" /><path d="M16.24 16.24l2.83 2.83" />
-                <path d="M2 12h4" /><path d="M18 12h4" />
-                <path d="M4.93 19.07l2.83-2.83" /><path d="M16.24 7.76l2.83-2.83" />
-            </svg>
-        ),
+        icon: <img src="/live.svg" width="20" height="20" alt="Live Tracking" style={{ display: 'block', opacity: 0.85 }} />,
     },
     {
         label: 'Vehicles',
         href: '/vehicles',
-        icon: (
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="1" y="3" width="15" height="13" rx="2" />
-                <polygon points="16 8 20 8 23 11 23 16 16 16 16 8" />
-                <circle cx="5.5" cy="18.5" r="2.5" />
-                <circle cx="18.5" cy="18.5" r="2.5" />
-            </svg>
-        ),
+        icon: <img src="/vehicles.svg" width="20" height="20" alt="Vehicles" style={{ display: 'block', opacity: 0.85 }} />,
     },
     {
         label: 'Journey',
         href: '/journey',
-        icon: (
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
-            </svg>
-        ),
+        icon: <img src="/journey.svg" width="20" height="20" alt="Journey" style={{ display: 'block', opacity: 0.85 }} />,
     },
     {
         label: 'Reports',
         href: '/reports',
-        icon: (
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="18" y1="20" x2="18" y2="10" />
-                <line x1="12" y1="20" x2="12" y2="4" />
-                <line x1="6" y1="20" x2="6" y2="14" />
-            </svg>
-        ),
+        icon: <img src="/reports.svg" width="20" height="20" alt="Reports" style={{ display: 'block', opacity: 0.85 }} />,
     },
     {
         label: 'Alerts',
         href: '/alerts',
-        icon: (
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-                <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-            </svg>
-        ),
+        icon: <img src="/alert.svg" width="20" height="20" alt="Alerts" style={{ display: 'block', opacity: 0.85 }} />,
     },
     {
         label: 'Geofences',
@@ -74,12 +44,7 @@ const NAV_ITEMS = [
     {
         label: 'Account',
         href: '/account',
-        icon: (
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                <circle cx="12" cy="7" r="4" />
-            </svg>
-        ),
+        icon: <img src="/account.svg" width="20" height="20" alt="Account" style={{ display: 'block', opacity: 0.85 }} />,
     },
 ];
 
@@ -127,23 +92,8 @@ export default function NavBar() {
 
     const w = ready ? (expanded ? EXPANDED_W : COLLAPSED_W) : EXPANDED_W;
 
-    // Sun icon (light mode)
-    const SunIcon = (
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="12" cy="12" r="5" />
-            <line x1="12" y1="1" x2="12" y2="3" /><line x1="12" y1="21" x2="12" y2="23" />
-            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" /><line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
-            <line x1="1" y1="12" x2="3" y2="12" /><line x1="21" y1="12" x2="23" y2="12" />
-            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" /><line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
-        </svg>
-    );
-
-    // Moon icon (dark mode)
-    const MoonIcon = (
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
-        </svg>
-    );
+    // Theme icon (uses custom SVG from /public)
+    const ThemeIcon = <img src="/themes.svg" width="20" height="20" alt="Theme" style={{ display: 'block', opacity: 0.85 }} />;
 
     return (
         <nav style={{
@@ -273,11 +223,7 @@ export default function NavBar() {
                     onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--nav-text-muted)'; }}
                 >
                     <span style={{ width: 20, minWidth: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-                            <polyline points="16 17 21 12 16 7" />
-                            <line x1="21" y1="12" x2="9" y2="12" />
-                        </svg>
+                        <img src="/logout.svg" width="20" height="20" alt="Logout" style={{ display: 'block', opacity: 0.85 }} />
                     </span>
                     <span style={{
                         fontSize: '0.9rem', fontWeight: 400,
@@ -304,14 +250,8 @@ export default function NavBar() {
                     onMouseEnter={e => { e.currentTarget.style.background = 'var(--nav-hover-bg)'; e.currentTarget.style.color = 'var(--nav-text)'; }}
                     onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--nav-text-muted)'; }}
                 >
-                    {/* Toggle track */}
-                    <span style={{
-                        width: 20, minWidth: 20, display: 'flex', alignItems: 'center',
-                        justifyContent: 'center', flexShrink: 0,
-                        color: dark ? 'var(--warning-500)' : 'var(--gray-500)',
-                        transition: 'color 0.2s',
-                    }}>
-                        {dark ? MoonIcon : SunIcon}
+                    <span style={{ width: 20, minWidth: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        {ThemeIcon}
                     </span>
                     {/* Label + inline toggle switch */}
                     <span style={{
