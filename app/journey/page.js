@@ -22,9 +22,13 @@ const JourneyMapComponent = dynamic(() => import('@/components/JourneyMap'), {
 });
 
 const SPEED_OPTIONS = [
-    { label: '1×', value: 1 },
-    { label: '2×', value: 2 },
-    { label: '4×', value: 4 },
+    { label: '0.2×', value: 0.2 },
+    { label: '0.3×', value: 0.3 },
+    { label: '0.5×', value: 0.5 },
+    { label: '0.75×', value: 0.75 },
+    { label: '1×',   value: 1 },
+    { label: '2×',   value: 2 },
+    { label: '4×',   value: 4 },
 ];
 
 function formatDuration(seconds) {
@@ -172,6 +176,38 @@ export default function JourneyPage() {
         }
     }, [isPlaying, pointIndex]);
 
+    // ── Keyboard shortcuts (Space = play/pause, ←/→ = step frame) ────────
+    useEffect(() => {
+        const onKey = (e) => {
+            const tag = e.target.tagName;
+            if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
+            if (e.code === 'Space') {
+                e.preventDefault();
+                setIsPlaying(prev => (hasData ? !prev : prev));
+            }
+            if (!isPlaying && mapRef.current) {
+                if (e.code === 'ArrowRight') {
+                    e.preventDefault();
+                    const next = Math.min(pointIndex + 1, (mapRef.current.getPointCount() || 1) - 1);
+                    setPointIndex(next);
+                    mapRef.current.seekTo(next);
+                    const ts = mapRef.current.getPointTimestamp(next);
+                    if (ts) setCurrentTime(ts);
+                }
+                if (e.code === 'ArrowLeft') {
+                    e.preventDefault();
+                    const prev = Math.max(pointIndex - 1, 0);
+                    setPointIndex(prev);
+                    mapRef.current.seekTo(prev);
+                    const ts = mapRef.current.getPointTimestamp(prev);
+                    if (ts) setCurrentTime(ts);
+                }
+            }
+        };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, [hasData, isPlaying, pointIndex]);
+
     // ── Computed ──────────────────────────────────────────────────────────
     const totalPoints = segments.reduce((s, seg) => s + seg.points.length, 0);
     const hasData = segments.length > 0 || stops.length > 0;
@@ -308,31 +344,82 @@ export default function JourneyPage() {
 
                             {/* Playback controls */}
                             {totalPoints > 0 && (
-                                <div>
-                                    {/* Speed buttons */}
-                                    <div style={{ display: 'flex', gap: '0.375rem', marginBottom: '0.75rem' }}>
-                                        {SPEED_OPTIONS.map(({ label, value }) => (
-                                            <button key={value} onClick={() => setPlaybackSpeed(value)}
-                                                style={{
-                                                    flex: 1, padding: '0.3rem 0', fontSize: '0.75rem', fontWeight: 500,
-                                                    background: playbackSpeed === value ? 'var(--primary-50)' : 'var(--gray-50)',
-                                                    color: playbackSpeed === value ? 'var(--primary-600)' : 'var(--gray-600)',
-                                                    border: `1px solid ${playbackSpeed === value ? 'var(--primary-200)' : 'var(--gray-200)'}`,
-                                                    borderRadius: 'var(--radius-sm)', cursor: 'pointer', fontFamily: 'inherit',
-                                                }}>
-                                                {label}
-                                            </button>
-                                        ))}
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
+
+                                    {/* ── Time clock + scrubber ── */}
+                                    <div style={{ background: 'var(--gray-50)', border: '1px solid var(--gray-200)', borderRadius: 'var(--radius-md)', padding: '0.625rem 0.75rem', textAlign: 'center' }}>
+                                        <div style={{ fontSize: '0.575rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--gray-500)', marginBottom: '0.2rem' }}>
+                                            Position Time
+                                        </div>
+                                        <div style={{ fontSize: '1.375rem', fontWeight: 700, color: 'var(--gray-800)', fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.02em', lineHeight: 1 }}>
+                                            {currentTime
+                                                ? new Date(currentTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+                                                : '——:——:——'}
+                                        </div>
+                                        {currentTime && (
+                                            <div style={{ fontSize: '0.625rem', color: 'var(--gray-500)', marginTop: '0.125rem' }}>
+                                                {new Date(currentTime).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })}
+                                            </div>
+                                        )}
+                                        {/* Scrubber */}
+                                        <input
+                                            type="range"
+                                            min={0}
+                                            max={Math.max(totalPoints - 1, 1)}
+                                            value={pointIndex}
+                                            onChange={(e) => {
+                                                const idx = Number(e.target.value);
+                                                setIsPlaying(false);
+                                                setPointIndex(idx);
+                                                if (mapRef.current) {
+                                                    mapRef.current.seekTo(idx);
+                                                    const ts = mapRef.current.getPointTimestamp(idx);
+                                                    if (ts) setCurrentTime(ts);
+                                                }
+                                            }}
+                                            style={{ width: '100%', margin: '0.5rem 0 0.2rem', accentColor: 'var(--primary-500)', cursor: 'pointer' }}
+                                        />
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.575rem', color: 'var(--gray-400)' }}>
+                                            <span>0</span>
+                                            <span style={{ color: 'var(--primary-500)', fontWeight: 600 }}>
+                                                {Math.round((pointIndex / Math.max(totalPoints - 1, 1)) * 100)}%
+                                            </span>
+                                            <span>{totalPoints} pts</span>
+                                        </div>
                                     </div>
 
-                                    {/* Play / Reset */}
+                                    {/* ── Speed strip ── */}
+                                    <div>
+                                        <div style={{ fontSize: '0.575rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--gray-500)', marginBottom: '0.25rem' }}>
+                                            Playback Speed
+                                        </div>
+                                        <div style={{ display: 'flex', gap: '0.25rem', overflowX: 'auto', paddingBottom: '2px' }}>
+                                            {SPEED_OPTIONS.map(({ label, value }) => (
+                                                <button key={value} onClick={() => setPlaybackSpeed(value)}
+                                                    style={{
+                                                        flexShrink: 0,
+                                                        padding: '0.25rem 0.5rem',
+                                                        fontSize: '0.7rem', fontWeight: 600,
+                                                        background: playbackSpeed === value ? 'var(--primary-500)' : 'var(--gray-50)',
+                                                        color: playbackSpeed === value ? 'white' : 'var(--gray-600)',
+                                                        border: `1px solid ${playbackSpeed === value ? 'var(--primary-500)' : 'var(--gray-200)'}`,
+                                                        borderRadius: 'var(--radius-sm)', cursor: 'pointer', fontFamily: 'inherit',
+                                                        transition: 'background 0.12s ease, color 0.12s ease, border-color 0.12s ease',
+                                                    }}>
+                                                    {label}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* ── Play / Skip controls ── */}
                                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.625rem' }}>
-                                        <button onClick={() => { setIsPlaying(false); setPointIndex(0); setCurrentTime(null); if (mapRef.current) mapRef.current.seekTo(0); }}
+                                        <button title="Skip to start" onClick={() => { setIsPlaying(false); setPointIndex(0); setCurrentTime(null); if (mapRef.current) mapRef.current.seekTo(0); }}
                                             style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 34, height: 34, background: 'var(--gray-50)', border: '1px solid var(--gray-200)', borderRadius: 'var(--radius-sm)', cursor: 'pointer', color: 'var(--gray-600)' }}>
                                             <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><polygon points="19 20 9 12 19 4 19 20"></polygon><line x1="5" y1="19" x2="5" y2="5" stroke="currentColor" strokeWidth="2" fill="none"></line></svg>
                                         </button>
 
-                                        <button
+                                        <button title={isPlaying ? 'Pause (Space)' : 'Play (Space)'}
                                             onClick={togglePlay}
                                             style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 42, height: 42, borderRadius: '50%', background: isPlaying ? '#ea4335' : 'var(--primary-500)', border: 'none', color: 'white', cursor: 'pointer', boxShadow: 'var(--shadow-sm)', transition: 'background 0.15s ease' }}>
                                             {isPlaying ? (
@@ -342,11 +429,23 @@ export default function JourneyPage() {
                                             )}
                                         </button>
 
-                                        <button onClick={() => { setIsPlaying(false); const total = mapRef.current?.getPointCount() || 1; setPointIndex(total - 1); if (mapRef.current) mapRef.current.seekTo(total - 1); }}
+                                        <button title="Skip to end" onClick={() => { setIsPlaying(false); const total = mapRef.current?.getPointCount() || 1; setPointIndex(total - 1); if (mapRef.current) mapRef.current.seekTo(total - 1); }}
                                             style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 34, height: 34, background: 'var(--gray-50)', border: '1px solid var(--gray-200)', borderRadius: 'var(--radius-sm)', cursor: 'pointer', color: 'var(--gray-600)' }}>
                                             <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 4 15 12 5 20 5 4"></polygon><line x1="19" y1="5" x2="19" y2="19" stroke="currentColor" strokeWidth="2" fill="none"></line></svg>
                                         </button>
                                     </div>
+
+                                    {/* ── Keyboard hint ── */}
+                                    <div style={{ textAlign: 'center', fontSize: '0.575rem', color: 'var(--gray-400)', lineHeight: 1.6 }}>
+                                        <kbd style={{ background: 'var(--gray-100)', border: '1px solid var(--gray-300)', borderRadius: 3, padding: '0 3px', fontSize: 'inherit' }}>Space</kbd>
+                                        {' '}play/pause
+                                        {' · '}
+                                        <kbd style={{ background: 'var(--gray-100)', border: '1px solid var(--gray-300)', borderRadius: 3, padding: '0 3px', fontSize: 'inherit' }}>←</kbd>
+                                        {' '}
+                                        <kbd style={{ background: 'var(--gray-100)', border: '1px solid var(--gray-300)', borderRadius: 3, padding: '0 3px', fontSize: 'inherit' }}>→</kbd>
+                                        {' '}step frame
+                                    </div>
+
                                 </div>
                             )}
 
@@ -523,6 +622,28 @@ export default function JourneyPage() {
                                     <span>{summary.stopCount} stops</span>
                                 </div>
                             )}
+                        </div>
+                    )}
+
+                    {/* Playback time overlay — bottom-left of map */}
+                    {hasData && currentTime && (
+                        <div style={{
+                            position: 'absolute', bottom: '1.5rem', left: '1rem', zIndex: 1000,
+                            background: 'rgba(26, 115, 232, 0.90)',
+                            backdropFilter: 'blur(8px)',
+                            WebkitBackdropFilter: 'blur(8px)',
+                            borderRadius: 'var(--radius-md)',
+                            padding: '0.375rem 0.75rem',
+                            boxShadow: '0 2px 8px rgba(0,0,0,0.25)',
+                            color: 'white',
+                            userSelect: 'none',
+                        }}>
+                            <div style={{ fontSize: '0.55rem', opacity: 0.8, textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+                                {isPlaying ? '▶ Playing' : '⏸ Paused'}
+                            </div>
+                            <div style={{ fontSize: '1.0625rem', fontWeight: 700, fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.02em', lineHeight: 1.2 }}>
+                                {new Date(currentTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                            </div>
                         </div>
                     )}
 
