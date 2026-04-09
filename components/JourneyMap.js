@@ -94,6 +94,10 @@ const JourneyMap = forwardRef(function JourneyMap(
     const prevSegmentsKey = useRef('');
     const currentIdxRef = useRef(0);       // tracks animation position without causing re-renders
     const playbackStateRef = useRef(null); // mirror of playbackState for use inside RAF
+    // Stable center/zoom — same object reference forever so @react-google-maps/api
+    // never calls map.setCenter() after the initial mount.
+    const initialCenter = useRef({ lat: 22.9734, lng: 78.6569 });
+    const initialZoom = useRef(5);
 
     // Build flat point array from all segments (for animation)
     const allPoints = useRef([]);
@@ -385,8 +389,8 @@ const JourneyMap = forwardRef(function JourneyMap(
     return (
         <GoogleMap
             mapContainerStyle={mapContainerStyle}
-            defaultCenter={{ lat: 22.9734, lng: 78.6569 }}
-            defaultZoom={5}
+            center={initialCenter.current}
+            zoom={initialZoom.current}
             onLoad={onLoad}
             onUnmount={onUnmount}
             options={MAP_OPTIONS}
