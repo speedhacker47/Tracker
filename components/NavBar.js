@@ -100,8 +100,7 @@ export default function NavBar() {
             const stored = localStorage.getItem(LS_KEY);
             if (stored === 'false') setExpanded(false);
             const theme = localStorage.getItem(LS_THEME);
-            const isDark = theme === 'dark' ||
-                (!theme && window.matchMedia('(prefers-color-scheme: dark)').matches);
+            const isDark = theme === 'dark'; // default is always light
             setDark(isDark);
             document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
         } catch (_) { }
