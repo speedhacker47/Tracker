@@ -101,7 +101,8 @@ const JourneyMap = forwardRef(function JourneyMap(
 
     // Build flat point array from all segments (for animation)
     const allPoints = useRef([]);
-    const cumDistKm = useRef([]); // cumulative km at each point index
+    const cumDistKm = useRef([]);  // cumulative km at each point index
+    const speedKmh  = useRef([]);  // instantaneous km/h at each point (derived)
     const autoFollowRef = useRef(autoFollow);
     useEffect(() => { autoFollowRef.current = autoFollow; }, [autoFollow]);
 
@@ -114,7 +115,7 @@ const JourneyMap = forwardRef(function JourneyMap(
         }
         allPoints.current = pts;
 
-        // Compute cumulative distance (Haversine)
+        // Compute cumulative Haversine distance (km)
         const cum = [0];
         for (let i = 1; i < pts.length; i++) {
             const R = 6371;
@@ -127,6 +128,23 @@ const JourneyMap = forwardRef(function JourneyMap(
             cum.push(cum[i-1] + d);
         }
         cumDistKm.current = cum;
+
+        // Derive instantaneous speed (km/h) from distance/time, then smooth with
+        // a 3-point moving average to reduce GPS jitter.
+        const raw = new Array(pts.length).fill(0);
+        for (let i = 1; i < pts.length; i++) {
+            const dtMs = new Date(pts[i].timestamp).getTime() -
+                         new Date(pts[i-1].timestamp).getTime();
+            const dKm  = cum[i] - cum[i-1];
+            if (dtMs > 0) raw[i] = (dKm / (dtMs / 3_600_000)); // km/h
+        }
+        // forward-pass 3-point average
+        const smoothed = raw.map((v, i) => {
+            if (i === 0) return raw[0];
+            if (i === raw.length - 1) return (raw[i - 1] + raw[i]) / 2;
+            return (raw[i - 1] + raw[i] + raw[i + 1]) / 3;
+        });
+        speedKmh.current = smoothed.map(v => Math.round(Math.max(0, v)));
     }, [segments]);
 
     const updateArrow = useCallback((map, idx) => {
@@ -391,9 +409,9 @@ const JourneyMap = forwardRef(function JourneyMap(
             return allPoints.current[idx]?.timestamp;
         },
         getPointSpeed(idx) {
-            // speed stored in knots; return km/h
-            const s = allPoints.current[idx]?.speed;
-            return s != null ? Math.round(s * 1.852) : null;
+            // Derived from consecutive Haversine distances + timestamps (smoothed)
+            const s = speedKmh.current[idx];
+            return s != null ? s : 0;
         },
         getDistanceAtPoint(idx) {
             return cumDistKm.current[idx] ?? null;
