@@ -90,6 +90,8 @@ const JourneyMap = forwardRef(function JourneyMap(
     const infoRef = useRef(null);
     const rafRef = useRef(null);
     const lastFrameRef = useRef(0);
+    const hasDrawnRef = useRef(false);
+    const prevSegmentsKey = useRef('');
 
     // Build flat point array from all segments (for animation)
     const allPoints = useRef([]);
@@ -103,6 +105,38 @@ const JourneyMap = forwardRef(function JourneyMap(
         allPoints.current = pts;
     }, [segments]);
 
+    const updateArrow = useCallback((map, idx) => {
+        const pt = allPoints.current[idx];
+        if (!pt) return;
+
+        const { AdvancedMarkerElement } = window.google.maps.marker;
+        const nextPt = allPoints.current[Math.min(idx + 1, allPoints.current.length - 1)];
+        const bearing = nextPt ? bearingBetween(pt, nextPt) : 0;
+
+        if (!arrowRef.current) {
+            const el = document.createElement('img');
+            el.src = arrowSVG(bearing);
+            el.width = 32; el.height = 32;
+            el.style.cssText = 'display:block;transform-origin:50% 50%';
+            arrowRef.current = new AdvancedMarkerElement({
+                position: { lat: pt.lat, lng: pt.lng }, map, zIndex: 20, content: el,
+            });
+        } else {
+            arrowRef.current.position = { lat: pt.lat, lng: pt.lng };
+            arrowRef.current.content.src = arrowSVG(bearing);
+        }
+    }, []);
+
+    const updateTrail = useCallback((idx) => {
+        if (!trailRef.current) return;
+        const pts = allPoints.current.slice(0, idx + 1);
+        const path = pts.map(p => ({ lat: p.lat, lng: p.lng }));
+        trailRef.current.setPath(path);
+        // Also update the white casing trail (last overlay pushed)
+        const casing = overlaysRef.current[overlaysRef.current.length - 1];
+        if (casing?.setPath) casing.setPath(path);
+    }, []);
+
     const onLoad = useCallback((map) => {
         mapRef.current = map;
         infoRef.current = new window.google.maps.InfoWindow();
@@ -113,6 +147,12 @@ const JourneyMap = forwardRef(function JourneyMap(
     // ── Draw static route + markers ───────────────────────────────────────
     useEffect(() => {
         if (!isLoaded || !mapRef.current) return;
+
+        const key = segments.map(s => s.id).join('|') + '_' + stops.length;
+        if (hasDrawnRef.current && prevSegmentsKey.current === key) return;
+        prevSegmentsKey.current = key;
+        hasDrawnRef.current = false;
+
         const map = mapRef.current;
 
         // Clear old overlays
@@ -224,6 +264,8 @@ const JourneyMap = forwardRef(function JourneyMap(
             geodesic: true, map, zIndex: 7,
         }));
 
+        hasDrawnRef.current = true;
+
         // Fit bounds
         setTimeout(() => {
             if (mapRef.current && !bounds.isEmpty()) {
@@ -257,7 +299,7 @@ const JourneyMap = forwardRef(function JourneyMap(
         let acc = 0;
 
         const frame = (timestamp) => {
-            if (!lastFrameRef.current) lastFrameRef.current = timestamp;
+            if (lastFrameRef.current === 0) lastFrameRef.current = timestamp;
             const delta = timestamp - lastFrameRef.current;
             lastFrameRef.current = timestamp;
 
@@ -272,7 +314,15 @@ const JourneyMap = forwardRef(function JourneyMap(
 
                 // Pan map to follow arrow
                 const pt = allPoints.current[currentIdx];
-                if (pt) map.panTo({ lat: pt.lat, lng: pt.lng });
+                if (pt) {
+                    const bounds = map.getBounds();
+                    const latLng = new window.google.maps.LatLng(pt.lat, pt.lng);
+                    if (bounds && !bounds.contains(latLng)) {
+                        map.panTo(latLng);
+                    } else if (!bounds) {
+                        map.panTo(latLng);
+                    }
+                }
 
                 // Report index back to parent
                 if (onPlaybackTick) onPlaybackTick(currentIdx);
@@ -294,40 +344,6 @@ const JourneyMap = forwardRef(function JourneyMap(
             if (rafRef.current) cancelAnimationFrame(rafRef.current);
         };
     }, [playbackState.isPlaying, playbackState.speed, playbackState.pointIndex, isLoaded]);
-
-    // ── Update arrow position + rotation ──────────────────────────────────
-    function updateArrow(map, idx) {
-        const pt = allPoints.current[idx];
-        if (!pt) return;
-
-        const { AdvancedMarkerElement } = window.google.maps.marker;
-        const nextPt = allPoints.current[Math.min(idx + 1, allPoints.current.length - 1)];
-        const bearing = nextPt ? bearingBetween(pt, nextPt) : 0;
-
-        if (!arrowRef.current) {
-            const el = document.createElement('img');
-            el.src = arrowSVG(bearing);
-            el.width = 32; el.height = 32;
-            el.style.cssText = 'display:block;transform-origin:50% 50%';
-            arrowRef.current = new AdvancedMarkerElement({
-                position: { lat: pt.lat, lng: pt.lng }, map, zIndex: 20, content: el,
-            });
-        } else {
-            arrowRef.current.position = { lat: pt.lat, lng: pt.lng };
-            arrowRef.current.content.src = arrowSVG(bearing);
-        }
-    }
-
-    // ── Update trail polyline ─────────────────────────────────────────────
-    function updateTrail(idx) {
-        if (!trailRef.current) return;
-        const pts = allPoints.current.slice(0, idx + 1);
-        const path = pts.map(p => ({ lat: p.lat, lng: p.lng }));
-        trailRef.current.setPath(path);
-        // Also update the white casing trail (last overlay pushed)
-        const casing = overlaysRef.current[overlaysRef.current.length - 1];
-        if (casing?.setPath) casing.setPath(path);
-    }
 
     // ── Expose seekTo for parent to jump to a point index ─────────────────
     useImperativeHandle(ref, () => ({
