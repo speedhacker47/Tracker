@@ -312,18 +312,6 @@ const JourneyMap = forwardRef(function JourneyMap(
                 updateArrow(map, currentIdx);
                 updateTrail(currentIdx);
 
-                // Pan map to follow arrow
-                const pt = allPoints.current[currentIdx];
-                if (pt) {
-                    const bounds = map.getBounds();
-                    const latLng = new window.google.maps.LatLng(pt.lat, pt.lng);
-                    if (bounds && !bounds.contains(latLng)) {
-                        map.panTo(latLng);
-                    } else if (!bounds) {
-                        map.panTo(latLng);
-                    }
-                }
-
                 // Report index back to parent
                 if (onPlaybackTick) onPlaybackTick(currentIdx);
 
