@@ -176,14 +176,22 @@ export default function JourneyPage() {
         }
     }, [isPlaying, pointIndex]);
 
+
+    // ── Computed ──────────────────────────────────────────────────────────
+    const totalPoints = segments.reduce((s, seg) => s + seg.points.length, 0);
+    const hasData = segments.length > 0 || stops.length > 0;
+    const selectedDeviceObj = devices.find(d => String(d.id) === selectedDevice);
+
     // ── Keyboard shortcuts (Space = play/pause, ←/→ = step frame) ────────
+    // NOTE: must be declared AFTER hasData to avoid TDZ in production builds.
     useEffect(() => {
         const onKey = (e) => {
             const tag = e.target.tagName;
             if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
             if (e.code === 'Space') {
                 e.preventDefault();
-                setIsPlaying(prev => (hasData ? !prev : prev));
+                // Use raw expression — avoids any stale-closure risk with hasData
+                setIsPlaying(prev => (segments.length > 0 || stops.length > 0 ? !prev : prev));
             }
             if (!isPlaying && mapRef.current) {
                 if (e.code === 'ArrowRight') {
@@ -206,12 +214,7 @@ export default function JourneyPage() {
         };
         window.addEventListener('keydown', onKey);
         return () => window.removeEventListener('keydown', onKey);
-    }, [hasData, isPlaying, pointIndex]);
-
-    // ── Computed ──────────────────────────────────────────────────────────
-    const totalPoints = segments.reduce((s, seg) => s + seg.points.length, 0);
-    const hasData = segments.length > 0 || stops.length > 0;
-    const selectedDeviceObj = devices.find(d => String(d.id) === selectedDevice);
+    }, [segments.length, stops.length, isPlaying, pointIndex]);
 
     const inputStyle = {
         width: '100%', padding: '0.5rem 0.625rem',
