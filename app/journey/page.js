@@ -26,9 +26,9 @@ const SPEED_OPTIONS = [
     { label: '0.3×', value: 0.3 },
     { label: '0.5×', value: 0.5 },
     { label: '0.75×', value: 0.75 },
-    { label: '1×',   value: 1 },
-    { label: '2×',   value: 2 },
-    { label: '4×',   value: 4 },
+    { label: '1×', value: 1 },
+    { label: '2×', value: 2 },
+    { label: '4×', value: 4 },
 ];
 
 function formatDuration(seconds) {
@@ -63,7 +63,7 @@ export default function JourneyPage() {
 
     // Playback
     const [isPlaying, setIsPlaying] = useState(false);
-    const [playbackSpeed, setPlaybackSpeed] = useState(1);
+    const [playbackSpeed, setPlaybackSpeed] = useState(0.3);
     const [pointIndex, setPointIndex] = useState(0);
     const [currentTime, setCurrentTime] = useState(null);
     const [currentSpeed, setCurrentSpeed] = useState(null);   // km/h at current point
@@ -201,7 +201,7 @@ export default function JourneyPage() {
             const arr = st.arrivedAt ? new Date(st.arrivedAt).getTime() : null;
             const dep = st.departedAt ? new Date(st.departedAt).getTime() : null;
             return arr && dep && t >= arr && t <= dep;
-          })
+        })
         : -1;
 
     // Distance remaining (from cumulative map distance)
@@ -504,61 +504,6 @@ export default function JourneyPage() {
                                 </div>
                             )}
 
-                            {/* Stops list */}
-                            {stops.length > 0 && (
-                                <div>
-                                    <div style={{ fontSize: '0.65rem', fontWeight: 400, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--gray-600)', marginBottom: '0.5rem' }}>
-                                        Stops ({stops.length})
-                                    </div>
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem', maxHeight: 240, overflowY: 'auto' }}>
-                                        {stops.map((st, i) => {
-                                            const isActive = i === activeStopIdx;
-                                            return (
-                                            <button key={st.id || i}
-                                                ref={el => { activeStopRowRefs.current[i] = el; }}
-                                                onClick={() => {
-                                                    setIsPlaying(false);
-                                                    if (mapRef.current) {
-                                                        const idx = mapRef.current.findPointByTime(st.arrivedAt);
-                                                        setPointIndex(idx);
-                                                        setCurrentTime(st.arrivedAt);
-                                                        mapRef.current.seekTo(idx);
-                                                        const spd = mapRef.current.getPointSpeed(idx);
-                                                        setCurrentSpeed(spd);
-                                                    }
-                                                }}
-                                                style={{
-                                                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                                                    padding: '0.5rem 0.625rem', borderRadius: 'var(--radius-sm)',
-                                                    background: isActive ? '#fef2f2' : 'var(--gray-50)',
-                                                    border: `1px solid ${isActive ? '#fca5a5' : 'var(--gray-200)'}`,
-                                                    cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
-                                                    transition: 'background 0.15s ease, border-color 0.15s ease',
-                                                    outline: isActive ? '2px solid #ef4444' : 'none',
-                                                    outlineOffset: -1,
-                                                }}
-                                            >
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: isActive ? '#ef4444' : '#ea4335', display: 'inline-block', flexShrink: 0, boxShadow: isActive ? '0 0 0 3px rgba(239,68,68,0.25)' : 'none', transition: 'box-shadow 0.2s' }} />
-                                                    <div>
-                                                        <div style={{ fontSize: '0.8125rem', color: isActive ? '#b91c1c' : 'var(--gray-800)', fontWeight: isActive ? 600 : 500 }}>
-                                                            {formatTime(st.arrivedAt)} → {formatTime(st.departedAt)}
-                                                        </div>
-                                                        <div style={{ fontSize: '0.6875rem', color: 'var(--gray-500)' }}>
-                                                            {st.lat?.toFixed(4)}, {st.lng?.toFixed(4)}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <span style={{ fontSize: '0.75rem', color: isActive ? '#b91c1c' : 'var(--gray-600)', fontWeight: 500, whiteSpace: 'nowrap' }}>
-                                                    {formatDuration(st.durationSeconds)}
-                                                </span>
-                                            </button>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-                            )}
-
                             {/* Segments list */}
                             {segments.length > 0 && (
                                 <div>
@@ -597,6 +542,61 @@ export default function JourneyPage() {
                                                 </span>
                                             </button>
                                         ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Stops list */}
+                            {stops.length > 0 && (
+                                <div>
+                                    <div style={{ fontSize: '0.65rem', fontWeight: 400, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--gray-600)', marginBottom: '0.5rem' }}>
+                                        Stops ({stops.length})
+                                    </div>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem', maxHeight: 240, overflowY: 'auto' }}>
+                                        {stops.map((st, i) => {
+                                            const isActive = i === activeStopIdx;
+                                            return (
+                                                <button key={st.id || i}
+                                                    ref={el => { activeStopRowRefs.current[i] = el; }}
+                                                    onClick={() => {
+                                                        setIsPlaying(false);
+                                                        if (mapRef.current) {
+                                                            const idx = mapRef.current.findPointByTime(st.arrivedAt);
+                                                            setPointIndex(idx);
+                                                            setCurrentTime(st.arrivedAt);
+                                                            mapRef.current.seekTo(idx);
+                                                            const spd = mapRef.current.getPointSpeed(idx);
+                                                            setCurrentSpeed(spd);
+                                                        }
+                                                    }}
+                                                    style={{
+                                                        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                                                        padding: '0.5rem 0.625rem', borderRadius: 'var(--radius-sm)',
+                                                        background: isActive ? '#fef2f2' : 'var(--gray-50)',
+                                                        border: `1px solid ${isActive ? '#fca5a5' : 'var(--gray-200)'}`,
+                                                        cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
+                                                        transition: 'background 0.15s ease, border-color 0.15s ease',
+                                                        outline: isActive ? '2px solid #ef4444' : 'none',
+                                                        outlineOffset: -1,
+                                                    }}
+                                                >
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                        <span style={{ width: 8, height: 8, borderRadius: '50%', background: isActive ? '#ef4444' : '#ea4335', display: 'inline-block', flexShrink: 0, boxShadow: isActive ? '0 0 0 3px rgba(239,68,68,0.25)' : 'none', transition: 'box-shadow 0.2s' }} />
+                                                        <div>
+                                                            <div style={{ fontSize: '0.8125rem', color: isActive ? '#b91c1c' : 'var(--gray-800)', fontWeight: isActive ? 600 : 500 }}>
+                                                                {formatTime(st.arrivedAt)} → {formatTime(st.departedAt)}
+                                                            </div>
+                                                            <div style={{ fontSize: '0.6875rem', color: 'var(--gray-500)' }}>
+                                                                {st.lat?.toFixed(4)}, {st.lng?.toFixed(4)}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <span style={{ fontSize: '0.75rem', color: isActive ? '#b91c1c' : 'var(--gray-600)', fontWeight: 500, whiteSpace: 'nowrap' }}>
+                                                        {formatDuration(st.durationSeconds)}
+                                                    </span>
+                                                </button>
+                                            );
+                                        })}
                                     </div>
                                 </div>
                             )}
@@ -719,8 +719,8 @@ export default function JourneyPage() {
                             {currentSpeed != null && (
                                 <div style={{
                                     background: currentSpeed > 80 ? 'rgba(220,38,38,0.88)'
-                                              : currentSpeed > 40 ? 'rgba(234,88,12,0.88)'
-                                              : 'rgba(5,150,105,0.88)',
+                                        : currentSpeed > 40 ? 'rgba(234,88,12,0.88)'
+                                            : 'rgba(5,150,105,0.88)',
                                     backdropFilter: 'blur(8px)',
                                     WebkitBackdropFilter: 'blur(8px)',
                                     padding: '0.375rem 0.75rem',
