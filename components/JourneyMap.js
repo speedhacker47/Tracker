@@ -92,6 +92,8 @@ const JourneyMap = forwardRef(function JourneyMap(
     const lastFrameRef = useRef(0);
     const hasDrawnRef = useRef(false);
     const prevSegmentsKey = useRef('');
+    const currentIdxRef = useRef(0);       // tracks animation position without causing re-renders
+    const playbackStateRef = useRef(null); // mirror of playbackState for use inside RAF
 
     // Build flat point array from all segments (for animation)
     const allPoints = useRef([]);
@@ -274,7 +276,15 @@ const JourneyMap = forwardRef(function JourneyMap(
         }, 200);
     }, [segments, stops, isLoaded]);
 
+    // ── Keep playbackStateRef in sync (so RAF closure always reads latest) ─
+    useEffect(() => {
+        playbackStateRef.current = playbackState;
+    });
+
     // ── Animation loop using requestAnimationFrame ────────────────────────
+    // NOTE: playbackState.pointIndex is intentionally NOT in deps here.
+    // The index is tracked via currentIdxRef so the RAF loop is not restarted
+    // on every tick (which was causing the map to snap back to India each frame).
     useEffect(() => {
         if (!isLoaded || !mapRef.current) return;
         const map = mapRef.current;
@@ -283,18 +293,18 @@ const JourneyMap = forwardRef(function JourneyMap(
             if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
 
             // Still update arrow position when paused (e.g., user seeks via timeline)
-            if (playbackState.pointIndex >= 0 && allPoints.current.length > 0) {
-                const idx = Math.min(playbackState.pointIndex, allPoints.current.length - 1);
-                updateArrow(map, idx);
-                updateTrail(idx);
+            const idx = playbackStateRef.current?.pointIndex ?? 0;
+            if (idx >= 0 && allPoints.current.length > 0) {
+                const safeIdx = Math.min(idx, allPoints.current.length - 1);
+                updateArrow(map, safeIdx);
+                updateTrail(safeIdx);
             }
             return;
         }
 
-        // Playing
-        let currentIdx = playbackState.pointIndex || 0;
+        // Playing — pick up from wherever currentIdxRef is (set by seekTo / previous pause)
+        currentIdxRef.current = playbackStateRef.current?.pointIndex || 0;
         const speedMultiplier = playbackState.speed || 1;
-        // Target ~60 points per second at 1x speed, but scaled by data density
         const msPerPoint = 50 / speedMultiplier;
         let acc = 0;
 
@@ -307,16 +317,19 @@ const JourneyMap = forwardRef(function JourneyMap(
             const steps = Math.floor(acc / msPerPoint);
             if (steps > 0) {
                 acc -= steps * msPerPoint;
-                currentIdx = Math.min(currentIdx + steps, allPoints.current.length - 1);
+                currentIdxRef.current = Math.min(
+                    currentIdxRef.current + steps,
+                    allPoints.current.length - 1
+                );
 
-                updateArrow(map, currentIdx);
-                updateTrail(currentIdx);
+                updateArrow(map, currentIdxRef.current);
+                updateTrail(currentIdxRef.current);
 
                 // Report index back to parent
-                if (onPlaybackTick) onPlaybackTick(currentIdx);
+                if (onPlaybackTick) onPlaybackTick(currentIdxRef.current);
 
                 // Reached end
-                if (currentIdx >= allPoints.current.length - 1) {
+                if (currentIdxRef.current >= allPoints.current.length - 1) {
                     if (onPlaybackTick) onPlaybackTick(-1); // signal completion
                     return;
                 }
@@ -331,13 +344,15 @@ const JourneyMap = forwardRef(function JourneyMap(
         return () => {
             if (rafRef.current) cancelAnimationFrame(rafRef.current);
         };
-    }, [playbackState.isPlaying, playbackState.speed, playbackState.pointIndex, isLoaded]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [playbackState.isPlaying, playbackState.speed, isLoaded]);
 
     // ── Expose seekTo for parent to jump to a point index ─────────────────
     useImperativeHandle(ref, () => ({
         seekTo(idx) {
             if (!mapRef.current || allPoints.current.length === 0) return;
             const safeIdx = Math.max(0, Math.min(idx, allPoints.current.length - 1));
+            currentIdxRef.current = safeIdx; // keep ref in sync
             updateArrow(mapRef.current, safeIdx);
             updateTrail(safeIdx);
             const pt = allPoints.current[safeIdx];
@@ -370,8 +385,8 @@ const JourneyMap = forwardRef(function JourneyMap(
     return (
         <GoogleMap
             mapContainerStyle={mapContainerStyle}
-            center={{ lat: 22.9734, lng: 78.6569 }}
-            zoom={5}
+            defaultCenter={{ lat: 22.9734, lng: 78.6569 }}
+            defaultZoom={5}
             onLoad={onLoad}
             onUnmount={onUnmount}
             options={MAP_OPTIONS}
