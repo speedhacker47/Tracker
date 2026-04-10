@@ -68,6 +68,7 @@ export default function JourneyPage() {
     const [currentTime, setCurrentTime] = useState(null);
     const [currentSpeed, setCurrentSpeed] = useState(null);   // km/h at current point
     const [autoFollow, setAutoFollow] = useState(true);       // camera follows arrow
+    const [showTrail, setShowTrail] = useState(true);          // trail breadcrumb on/off
     const [distanceTravelled, setDistanceTravelled] = useState(0); // km so far
     const activeStopRowRefs = useRef({});  // keyed by stop index
 
@@ -640,6 +641,7 @@ export default function JourneyPage() {
                             playbackState={{ isPlaying, speed: playbackSpeed, pointIndex }}
                             onPlaybackTick={handlePlaybackTick}
                             autoFollow={autoFollow}
+                            showTrail={showTrail}
                         />
                     ) : (
                         <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--gray-500)' }}>
@@ -657,6 +659,61 @@ export default function JourneyPage() {
                             <p style={{ fontSize: '0.8125rem', color: 'var(--gray-500)', margin: 0, textAlign: 'center', lineHeight: 1.6 }}>
                                 Select a vehicle &amp; date,<br />then click <strong>Load Journey</strong>
                             </p>
+                        </div>
+                    )}
+
+                    {/* Map controls overlay — top-left: Camera Follow + Trail toggles */}
+                    {hasData && (
+                        <div style={{
+                            position: 'absolute', top: '1rem', left: '1rem', zIndex: 1000,
+                            display: 'flex', flexDirection: 'column', gap: '0.5rem',
+                        }}>
+                            {/* Camera follow toggle */}
+                            <button
+                                onClick={() => setAutoFollow(v => !v)}
+                                style={{
+                                    display: 'flex', alignItems: 'center', gap: '0.45rem',
+                                    padding: '0.4rem 0.75rem',
+                                    background: autoFollow ? '#1a73e8' : 'white',
+                                    color: autoFollow ? 'white' : 'var(--gray-700)',
+                                    border: autoFollow ? '1.5px solid #1a73e8' : '1.5px solid var(--gray-300)',
+                                    borderRadius: 'var(--radius-full)',
+                                    cursor: 'pointer', fontSize: '0.75rem', fontWeight: 600,
+                                    boxShadow: 'var(--shadow-md)', letterSpacing: '0.01em',
+                                    transition: 'all 0.15s ease',
+                                    whiteSpace: 'nowrap',
+                                }}
+                            >
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+                                    stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                    <circle cx="12" cy="12" r="3"/>
+                                    <path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1l2.1-2.1M17 7l2.1-2.1"/>
+                                </svg>
+                                {autoFollow ? 'Following' : 'Follow'}
+                            </button>
+
+                            {/* Trail toggle */}
+                            <button
+                                onClick={() => setShowTrail(v => !v)}
+                                style={{
+                                    display: 'flex', alignItems: 'center', gap: '0.45rem',
+                                    padding: '0.4rem 0.75rem',
+                                    background: showTrail ? '#1a73e8' : 'white',
+                                    color: showTrail ? 'white' : 'var(--gray-700)',
+                                    border: showTrail ? '1.5px solid #1a73e8' : '1.5px solid var(--gray-300)',
+                                    borderRadius: 'var(--radius-full)',
+                                    cursor: 'pointer', fontSize: '0.75rem', fontWeight: 600,
+                                    boxShadow: 'var(--shadow-md)', letterSpacing: '0.01em',
+                                    transition: 'all 0.15s ease',
+                                    whiteSpace: 'nowrap',
+                                }}
+                            >
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+                                    stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                                </svg>
+                                Trail {showTrail ? 'On' : 'Off'}
+                            </button>
                         </div>
                     )}
 
