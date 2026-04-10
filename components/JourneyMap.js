@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useCallback, useImperativeHandle, forwardRef } from 'react';
+import { useState, useEffect, useRef, useCallback, useImperativeHandle, forwardRef } from 'react';
 import { GoogleMap, useJsApiLoader } from '@react-google-maps/api';
 
 const GOOGLE_MAPS_LIBRARIES = ['geometry', 'marker'];
@@ -90,6 +90,10 @@ const JourneyMap = forwardRef(function JourneyMap(
         libraries: GOOGLE_MAPS_LIBRARIES,
     });
 
+    // Track when the map instance is actually ready (not just when the API script loads).
+    // This is used as a draw-effect dep so the effect re-runs if it fired before the map existed.
+    const [mapReady, setMapReady] = useState(false);
+
     const mapRef = useRef(null);
     const overlaysRef = useRef([]);     // static route polylines
     const markersRef = useRef([]);     // stop markers, start/end pins
@@ -102,7 +106,7 @@ const JourneyMap = forwardRef(function JourneyMap(
 
     // Stable center/zoom so @react-google-maps/api never calls setCenter() again.
     const initialCenter = useRef({ lat: 22.9734, lng: 78.6569 });
-    const initialZoom = useRef(20);
+    const initialZoom = useRef(15);
 
     // ── Data refs (populated when segments change) ────────────────────────
     const allPoints = useRef([]);   // flat array of all GPS points
@@ -209,26 +213,11 @@ const JourneyMap = forwardRef(function JourneyMap(
     // Always updates polyline paths — visibility is managed separately by setVisible().
     // fromIdx  — integer "from" point index
     // interpLat/Lng — exact current interpolated position
-    const _trailLoggedRef = useRef(false);
     const updateTrailAt = useCallback((fromIdx, interpLat, interpLng) => {
         // Completed trail + its white casing: everything up to and including fromIdx
         const completedPath = allPoints.current
             .slice(0, fromIdx + 1)
             .map(p => ({ lat: p.lat, lng: p.lng }));
-
-        // ── Diagnostic log (fires once when fromIdx first reaches 5) ──────
-        if (fromIdx >= 5 && !_trailLoggedRef.current) {
-            _trailLoggedRef.current = true;
-            console.log('[Trail DEBUG]', {
-                fromIdx,
-                completedPathLen: completedPath.length,
-                completedTrailRef: !!completedTrailRef.current,
-                trailCasingRef: !!trailCasingRef.current,
-                activeSegTrailRef: !!activeSegTrailRef.current,
-                firstPoint: completedPath[0],
-                lastPoint: completedPath[completedPath.length - 1],
-            });
-        }
 
         completedTrailRef.current?.setPath(completedPath);
         trailCasingRef.current?.setPath(completedPath);
@@ -246,13 +235,17 @@ const JourneyMap = forwardRef(function JourneyMap(
     const onLoad = useCallback((map) => {
         mapRef.current = map;
         infoRef.current = new window.google.maps.InfoWindow();
-    }, []);
+        // Flip mapReady so the draw effect re-runs now that we have a map instance.
+        setMapReady(true);
+    }, [setMapReady]);
 
     const onUnmount = useCallback(() => { mapRef.current = null; }, []);
 
     // ── Draw static route + markers when segments change ─────────────────
+    // mapReady is a state dep (not just a ref) so this effect fires correctly
+    // even when segments arrive before the map instance exists.
     useEffect(() => {
-        if (!isLoaded || !mapRef.current) return;
+        if (!isLoaded || !mapReady || !mapRef.current) return;
 
         const key = segments.map(s => s.id).join('|') + '_' + stops.length;
         if (hasDrawnRef.current && prevSegmentsKey.current === key) return;
@@ -368,19 +361,19 @@ const JourneyMap = forwardRef(function JourneyMap(
 
         // White casing (drawn behind the blue trail)
         trailCasingRef.current = new window.google.maps.Polyline({
-            path: [], strokeColor: '#fff', strokeOpacity: 1, strokeWeight: 11,
+            path: [], strokeColor: '#fff', strokeOpacity: 1, strokeWeight: 9,
             geodesic: true, map, zIndex: 7, visible: trailVisible,
         });
-        // Completed trail (all passed points) — DEBUG: bright orange so we can see it
+        // Completed trail (all passed points) — deep blue, sits above casing
         completedTrailRef.current = new window.google.maps.Polyline({
             path: [],
-            strokeColor: '#ff6600', strokeOpacity: 1, strokeWeight: 8,
+            strokeColor: '#1a73e8', strokeOpacity: 0.95, strokeWeight: 6,
             geodesic: true, map, zIndex: 8, visible: trailVisible,
         });
-        // Active segment (from last GPS point → current interp pos) — DEBUG: yellow
+        // Active segment (from last GPS point → current interp pos) — brighter blue
         activeSegTrailRef.current = new window.google.maps.Polyline({
             path: [],
-            strokeColor: '#ffcc00', strokeOpacity: 1, strokeWeight: 8,
+            strokeColor: '#4285f4', strokeOpacity: 1, strokeWeight: 6,
             geodesic: true, map, zIndex: 9, visible: trailVisible,
         });
 
@@ -392,7 +385,7 @@ const JourneyMap = forwardRef(function JourneyMap(
                 mapRef.current.fitBounds(bounds, { top: 80, bottom: 40, left: 40, right: 40 });
             }
         }, 200);
-    }, [segments, stops, isLoaded]);
+    }, [segments, stops, isLoaded, mapReady]);
 
     // ── Show / hide trail when toggle changes ────────────────────────────
     useEffect(() => {
