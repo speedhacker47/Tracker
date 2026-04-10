@@ -530,8 +530,18 @@ const JourneyMap = forwardRef(function JourneyMap(
         },
 
         getPointSpeed(idx) {
-            const s = speedKmh.current[idx];
-            return s != null ? s : 0;
+            const pt = allPoints.current[idx];
+            if (!pt) return null;
+
+            // Prefer the real Traccar speed stored in the DB (integer km/h).
+            // This is null for historic points recorded before the speed_kmh
+            // column was added — fall back to the timestamp-derived estimate.
+            if (pt.speed != null) return pt.speed;
+
+            // Fallback: smoothed speed derived from GPS Δtime (noisier, but
+            // better than nothing for pre-migration data).
+            const computed = speedKmh.current[idx];
+            return computed != null ? Math.round(computed) : null;
         },
 
         getDistanceAtPoint(idx) {
