@@ -102,7 +102,7 @@ const JourneyMap = forwardRef(function JourneyMap(
 
     // Stable center/zoom so @react-google-maps/api never calls setCenter() again.
     const initialCenter = useRef({ lat: 22.9734, lng: 78.6569 });
-    const initialZoom = useRef(13);
+    const initialZoom = useRef(20);
 
     // ── Data refs (populated when segments change) ────────────────────────
     const allPoints = useRef([]);   // flat array of all GPS points
@@ -122,8 +122,8 @@ const JourneyMap = forwardRef(function JourneyMap(
     // trailCasingRef:    white casing drawn behind completedTrail
     const completedTrailRef = useRef(null);
     const activeSegTrailRef = useRef(null);
-    const trailCasingRef    = useRef(null);
-    const showTrailRef      = useRef(showTrail !== false);
+    const trailCasingRef = useRef(null);
+    const showTrailRef = useRef(showTrail !== false);
     useEffect(() => { showTrailRef.current = showTrail !== false; }, [showTrail]);
 
     // ── Misc refs ─────────────────────────────────────────────────────────
@@ -209,11 +209,26 @@ const JourneyMap = forwardRef(function JourneyMap(
     // Always updates polyline paths — visibility is managed separately by setVisible().
     // fromIdx  — integer "from" point index
     // interpLat/Lng — exact current interpolated position
+    const _trailLoggedRef = useRef(false);
     const updateTrailAt = useCallback((fromIdx, interpLat, interpLng) => {
         // Completed trail + its white casing: everything up to and including fromIdx
         const completedPath = allPoints.current
             .slice(0, fromIdx + 1)
             .map(p => ({ lat: p.lat, lng: p.lng }));
+
+        // ── Diagnostic log (fires once when fromIdx first reaches 5) ──────
+        if (fromIdx >= 5 && !_trailLoggedRef.current) {
+            _trailLoggedRef.current = true;
+            console.log('[Trail DEBUG]', {
+                fromIdx,
+                completedPathLen: completedPath.length,
+                completedTrailRef: !!completedTrailRef.current,
+                trailCasingRef: !!trailCasingRef.current,
+                activeSegTrailRef: !!activeSegTrailRef.current,
+                firstPoint: completedPath[0],
+                lastPoint: completedPath[completedPath.length - 1],
+            });
+        }
 
         completedTrailRef.current?.setPath(completedPath);
         trailCasingRef.current?.setPath(completedPath);
@@ -253,7 +268,7 @@ const JourneyMap = forwardRef(function JourneyMap(
         markersRef.current = [];
         if (arrowRef.current) { arrowRef.current.map = null; arrowRef.current = null; }
         if (completedTrailRef.current) { completedTrailRef.current.setMap(null); completedTrailRef.current = null; }
-        if (trailCasingRef.current)    { trailCasingRef.current.setMap(null); trailCasingRef.current = null; }
+        if (trailCasingRef.current) { trailCasingRef.current.setMap(null); trailCasingRef.current = null; }
         if (activeSegTrailRef.current) { activeSegTrailRef.current.setMap(null); activeSegTrailRef.current = null; }
         infoRef.current?.close();
 
@@ -353,19 +368,19 @@ const JourneyMap = forwardRef(function JourneyMap(
 
         // White casing (drawn behind the blue trail)
         trailCasingRef.current = new window.google.maps.Polyline({
-            path: [], strokeColor: '#fff', strokeOpacity: 1, strokeWeight: 9,
+            path: [], strokeColor: '#fff', strokeOpacity: 1, strokeWeight: 11,
             geodesic: true, map, zIndex: 7, visible: trailVisible,
         });
-        // Completed trail (all passed points) — blue, sits above casing
+        // Completed trail (all passed points) — DEBUG: bright orange so we can see it
         completedTrailRef.current = new window.google.maps.Polyline({
             path: [],
-            strokeColor: '#1a73e8', strokeOpacity: 0.95, strokeWeight: 6,
+            strokeColor: '#ff6600', strokeOpacity: 1, strokeWeight: 8,
             geodesic: true, map, zIndex: 8, visible: trailVisible,
         });
-        // Active segment (from last GPS point → current interp pos) — brighter
+        // Active segment (from last GPS point → current interp pos) — DEBUG: yellow
         activeSegTrailRef.current = new window.google.maps.Polyline({
             path: [],
-            strokeColor: '#4285f4', strokeOpacity: 1, strokeWeight: 6,
+            strokeColor: '#ffcc00', strokeOpacity: 1, strokeWeight: 8,
             geodesic: true, map, zIndex: 9, visible: trailVisible,
         });
 
