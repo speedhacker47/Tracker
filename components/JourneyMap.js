@@ -166,12 +166,20 @@ const JourneyMap = forwardRef(function JourneyMap(
         });
         speedKmh.current = smoothed.map(v => Math.round(Math.max(0, v)));
 
-        // Real elapsed ms between consecutive points (used by lerp for speed).
-        // Clamp to 300 000 ms (5 min) to ignore stop-boundary gaps.
-        const dur = new Array(pts.length).fill(50); // fallback: 50 ms
+        // Animation duration per segment — derived from real Traccar speed.
+        // Formula: duration_ms = (distanceKm / speedKmh) × 3_600_000
+        // This is the time it physically takes to drive that gap at the reported speed.
+        // Falls back to 50 ms/point when speed is null (historic data) or 0 (stopped).
+        const dur = new Array(pts.length).fill(50);
         for (let i = 1; i < pts.length; i++) {
-            const dtMs = new Date(pts[i].timestamp).getTime() - new Date(pts[i - 1].timestamp).getTime();
-            if (dtMs > 0 && dtMs < 300_000) dur[i] = dtMs;
+            const ptSpeedKmh = pts[i].speed;   // already in km/h from API, may be null
+            if (ptSpeedKmh != null && ptSpeedKmh > 1) {
+                const distKm = cum[i] - cum[i - 1];
+                const realMs = (distKm / ptSpeedKmh) * 3_600_000;
+                // Clamp: 15ms min (very fast road), 4000ms max (prevents stall on GPS outliers)
+                dur[i] = Math.min(Math.max(realMs, 15), 4000);
+            }
+            // else: dur[i] stays at 50 ms fallback
         }
         segDurMs.current = dur;
     }, [segments]);

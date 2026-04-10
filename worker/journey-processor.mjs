@@ -71,12 +71,19 @@ function pointsWithinRadius(points, radiusM) {
 }
 
 // ── Google Roads API: snapToRoads ──────────────────────────────────────────────
+// Carries Traccar speed (knots → km/h) through snapping.
+// For interpolated points inserted by the Roads API, we forward the nearest
+// original point's speed — better than nothing and visually smooth.
 async function snapToRoads(points) {
     if (!GOOGLE_ROADS_KEY) {
         console.warn('[journey] No GOOGLE_ROADS_API_KEY — using raw points');
         return points.map((p, i) => ({
-            latitude: p.latitude, longitude: p.longitude,
-            timestamp: p.fixtime, sequence: i,
+            latitude:  p.latitude,
+            longitude: p.longitude,
+            timestamp: p.fixtime,
+            // Traccar reports speed in knots → convert to km/h
+            speed_kmh: (p.speed != null && p.speed >= 0) ? p.speed * 1.852 : null,
+            sequence:  i,
         }));
     }
 
@@ -100,23 +107,36 @@ async function snapToRoads(points) {
             // Fallback: use raw points for this batch
             console.warn('[journey] Roads API returned no snapped points — using raw');
             for (const p of batch) {
-                results.push({ latitude: p.latitude, longitude: p.longitude, timestamp: p.fixtime });
+                results.push({
+                    latitude:  p.latitude,
+                    longitude: p.longitude,
+                    timestamp: p.fixtime,
+                    speed_kmh: (p.speed != null && p.speed >= 0) ? p.speed * 1.852 : null,
+                });
             }
         } else {
             for (const sp of data.snappedPoints) {
-                // Determine timestamp from originalIndex
+                // Determine timestamp and speed from originalIndex
                 const origIdx = sp.originalIndex;
-                let ts;
+                let ts, speed_kmh;
+
                 if (origIdx !== undefined && origIdx !== null && batch[origIdx]) {
-                    ts = batch[origIdx].fixtime;
+                    // Original point — use its timestamp and speed exactly
+                    ts        = batch[origIdx].fixtime;
+                    speed_kmh = (batch[origIdx].speed != null && batch[origIdx].speed >= 0)
+                        ? batch[origIdx].speed * 1.852
+                        : null;
                 } else {
-                    // Interpolated point — use last known timestamp
-                    ts = results.length > 0 ? results[results.length - 1].timestamp : batch[0].fixtime;
+                    // Interpolated point inserted by Google — carry forward last known values
+                    ts        = results.length > 0 ? results[results.length - 1].timestamp : batch[0].fixtime;
+                    speed_kmh = results.length > 0 ? results[results.length - 1].speed_kmh : null;
                 }
+
                 results.push({
-                    latitude: sp.location.latitude,
+                    latitude:  sp.location.latitude,
                     longitude: sp.location.longitude,
                     timestamp: ts,
+                    speed_kmh,
                 });
             }
         }
@@ -173,15 +193,13 @@ async function processDevice(deviceId) {
     const positions = await getLatestPositions(deviceId, 20);
     if (positions.length < STOP_POINT_COUNT) return;
 
-    const openStop = await getOpenStop(deviceId);
-
-    // Check the latest N points for stop condition
-    const tail = positions.slice(-STOP_POINT_COUNT);
+    const tail      = positions.slice(-STOP_POINT_COUNT);
     const isStopped = pointsWithinRadius(tail, STOP_RADIUS_M);
+    const openStop  = await getOpenStop(deviceId);
 
     if (isStopped && !openStop) {
-        // ── Vehicle just stopped → create stop record ──────────────────────
-        const cLat = tail.reduce((s, p) => s + p.latitude, 0) / tail.length;
+        // ── Vehicle just stopped → record stop ───────────────────────────────
+        const cLat = tail.reduce((s, p) => s + p.latitude, 0)  / tail.length;
         const cLon = tail.reduce((s, p) => s + p.longitude, 0) / tail.length;
         const arrivedAt = tail[0].fixtime;
 
@@ -263,7 +281,7 @@ async function processSegments() {
         await pool.query(`UPDATE journey_segments SET status = 'processing' WHERE id = $1`, [seg.id]);
 
         try {
-            // Fetch raw GPS points for this segment's time range
+            // Fetch raw GPS points (includes speed from tc_positions)
             const rawPoints = await getPositionsBetween(seg.device_id, seg.started_at, seg.ended_at);
 
             if (rawPoints.length < 2) {
@@ -274,23 +292,14 @@ async function processSegments() {
                 continue;
             }
 
-            // Snap to roads
+            // Snap to roads (speed is carried through — see snapToRoads())
             const snapped = await snapToRoads(rawPoints);
 
             // Delete any existing points (in case of retry)
             await pool.query(`DELETE FROM journey_segment_points WHERE segment_id = $1`, [seg.id]);
 
-            // Bulk insert snapped points
+            // Bulk insert snapped points — now includes speed_kmh
             if (snapped.length > 0) {
-                const values = [];
-                const params = [];
-                let idx = 1;
-                for (const pt of snapped) {
-                    values.push(`($${idx}, $${idx + 1}, $${idx + 2}, $${idx + 3}, $${idx + 4})`);
-                    params.push(seg.id, pt.sequence, pt.latitude, pt.longitude, pt.timestamp);
-                    idx += 5;
-                }
-
                 // Insert in batches of 500 points to avoid query param limits
                 const BATCH = 500;
                 for (let b = 0; b < snapped.length; b += BATCH) {
@@ -300,12 +309,13 @@ async function processSegments() {
                     let bIdx = 1;
                     for (let j = b; j < batchEnd; j++) {
                         const pt = snapped[j];
-                        batchValues.push(`($${bIdx}, $${bIdx + 1}, $${bIdx + 2}, $${bIdx + 3}, $${bIdx + 4})`);
-                        batchParams.push(seg.id, pt.sequence, pt.latitude, pt.longitude, pt.timestamp);
-                        bIdx += 5;
+                        batchValues.push(`($${bIdx}, $${bIdx + 1}, $${bIdx + 2}, $${bIdx + 3}, $${bIdx + 4}, $${bIdx + 5})`);
+                        batchParams.push(seg.id, pt.sequence, pt.latitude, pt.longitude, pt.timestamp, pt.speed_kmh ?? null);
+                        bIdx += 6;
                     }
                     await pool.query(`
-                        INSERT INTO journey_segment_points (segment_id, sequence, latitude, longitude, timestamp)
+                        INSERT INTO journey_segment_points
+                          (segment_id, sequence, latitude, longitude, timestamp, speed_kmh)
                         VALUES ${batchValues.join(',')}
                     `, batchParams);
                 }
