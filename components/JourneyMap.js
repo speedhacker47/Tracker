@@ -464,7 +464,31 @@ const JourneyMap = forwardRef(function JourneyMap(
             updateArrowAt(map, lat, lng, Math.round(lerpAngleRef.current));
             updateTrailAt(from, lat, lng);
 
-            if (autoFollowRef.current) map.panTo({ lat, lng });
+            // ── Soft-follow camera ────────────────────────────────────────────
+            // Only pan when the arrow drifts into the outer 20% band of the viewport.
+            // This means the user can zoom freely — we never touch the camera unless
+            // the arrow is near/at the edge. When we do pan, Google Maps' built-in
+            // animation makes it slide smoothly rather than teleport.
+            if (autoFollowRef.current) {
+                const bounds = map.getBounds();
+                if (bounds) {
+                    const ne     = bounds.getNorthEast();
+                    const sw     = bounds.getSouthWest();
+                    const spanLat = ne.lat() - sw.lat();
+                    const spanLng = ne.lng() - sw.lng();
+
+                    // Inner keep-zone = centre 60%. Outer 20% band on each side = trigger.
+                    const PAD    = 0.20;
+                    const minLat = sw.lat() + spanLat * PAD;
+                    const maxLat = ne.lat() - spanLat * PAD;
+                    const minLng = sw.lng() + spanLng * PAD;
+                    const maxLng = ne.lng() - spanLng * PAD;
+
+                    if (lat < minLat || lat > maxLat || lng < minLng || lng > maxLng) {
+                        map.panTo({ lat, lng });
+                    }
+                }
+            }
 
             rafRef.current = requestAnimationFrame(frame);
         };
