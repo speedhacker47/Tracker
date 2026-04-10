@@ -206,33 +206,25 @@ const JourneyMap = forwardRef(function JourneyMap(
     }, []);
 
     // ── Trail helper: two-polyline update ─────────────────────────────────
+    // Always updates polyline paths — visibility is managed separately by setVisible().
     // fromIdx  — integer "from" point index
     // interpLat/Lng — exact current interpolated position
     const updateTrailAt = useCallback((fromIdx, interpLat, interpLng) => {
-        if (!showTrailRef.current) return; // skip updates when trail is hidden
-
         // Completed trail + its white casing: everything up to and including fromIdx
         const completedPath = allPoints.current
             .slice(0, fromIdx + 1)
             .map(p => ({ lat: p.lat, lng: p.lng }));
 
-        if (completedTrailRef.current) {
-            completedTrailRef.current.setPath(completedPath);
-        }
-        // Keep white casing in sync with the completed trail
-        if (trailCasingRef.current) {
-            trailCasingRef.current.setPath(completedPath);
-        }
+        completedTrailRef.current?.setPath(completedPath);
+        trailCasingRef.current?.setPath(completedPath);
 
-        // Active segment: always exactly 2 points
-        if (activeSegTrailRef.current) {
-            const from = allPoints.current[fromIdx];
-            if (from) {
-                activeSegTrailRef.current.setPath([
-                    { lat: from.lat, lng: from.lng },
-                    { lat: interpLat, lng: interpLng },
-                ]);
-            }
+        // Active segment: always exactly 2 points (GPS anchor → interp pos)
+        const anchor = allPoints.current[fromIdx];
+        if (anchor && activeSegTrailRef.current) {
+            activeSegTrailRef.current.setPath([
+                { lat: anchor.lat, lng: anchor.lng },
+                { lat: interpLat, lng: interpLng },
+            ]);
         }
     }, []);
 
@@ -394,13 +386,18 @@ const JourneyMap = forwardRef(function JourneyMap(
         completedTrailRef.current?.setVisible(visible);
         trailCasingRef.current?.setVisible(visible);
         activeSegTrailRef.current?.setVisible(visible);
-        // When hiding, clear paths so the polylines don't ghost-draw on show
-        if (!visible) {
-            completedTrailRef.current?.setPath([]);
-            trailCasingRef.current?.setPath([]);
-            activeSegTrailRef.current?.setPath([]);
+
+        // When re-enabling while paused: force-redraw at current index so the
+        // trail appears immediately without waiting for a new animation tick.
+        if (visible && mapRef.current && allPoints.current.length > 0) {
+            const idx = Math.min(
+                Math.max(lerpFromRef.current, 0),
+                allPoints.current.length - 1
+            );
+            const pt = allPoints.current[idx];
+            if (pt) updateTrailAt(idx, pt.lat, pt.lng);
         }
-    }, [showTrail]);
+    }, [showTrail, updateTrailAt]);
 
     // ── Animation loop ────────────────────────────────────────────────────
     // Drives the lerp between GPS points using real timestamps.
