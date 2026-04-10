@@ -59,7 +59,7 @@ export async function GET(request, { params }) {
         const segments = [];
         for (const seg of segResult.rows) {
             const ptResult = await query(`
-                SELECT sequence, latitude, longitude, timestamp
+                SELECT sequence, latitude, longitude, timestamp, speed_kmh
                 FROM journey_segment_points
                 WHERE segment_id = $1
                 ORDER BY sequence ASC
@@ -75,6 +75,11 @@ export async function GET(request, { params }) {
                     lat: Number(r.latitude),
                     lng: Number(r.longitude),
                     timestamp: r.timestamp,
+                    // speed_kmh from Traccar (knots→km/h, stored by journey-processor)
+                    // null = historic data before migration — frontend falls back gracefully
+                    speed: r.speed_kmh !== null && r.speed_kmh !== undefined
+                        ? Math.round(Number(r.speed_kmh))
+                        : null,
                 })),
             });
         }
