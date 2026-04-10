@@ -735,7 +735,7 @@ export default function JourneyPage() {
                                 }}>
                                     <div style={{ fontSize: '0.55rem', opacity: 0.8, textTransform: 'uppercase', letterSpacing: '0.07em' }}>Speed</div>
                                     <div style={{ fontSize: '1.0625rem', fontWeight: 700, fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.02em', lineHeight: 1.2 }}>
-                                        {currentSpeed}
+                                        {currentSpeed > 0 ? currentSpeed : '—'}
                                     </div>
                                     <div style={{ fontSize: '0.5rem', opacity: 0.8, letterSpacing: '0.04em' }}>km/h</div>
                                 </div>
