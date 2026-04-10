@@ -63,7 +63,7 @@ export default function JourneyPage() {
 
     // Playback
     const [isPlaying, setIsPlaying] = useState(false);
-    const [playbackSpeed, setPlaybackSpeed] = useState(1);
+    const [playbackSpeed, setPlaybackSpeed] = useState(0.3);
     const [pointIndex, setPointIndex] = useState(0);
     const [currentTime, setCurrentTime] = useState(null);
     const [currentSpeed, setCurrentSpeed] = useState(null);   // km/h at current point

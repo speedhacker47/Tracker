@@ -97,7 +97,7 @@ const JourneyMap = forwardRef(function JourneyMap(
     // Stable center/zoom — same object reference forever so @react-google-maps/api
     // never calls map.setCenter() after the initial mount.
     const initialCenter = useRef({ lat: 22.9734, lng: 78.6569 });
-    const initialZoom = useRef(5);
+    const initialZoom = useRef(14);
 
     // Build flat point array from all segments (for animation)
     const allPoints = useRef([]);
