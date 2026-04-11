@@ -6,7 +6,7 @@ import dynamic from 'next/dynamic';
 import NavBar from '@/components/NavBar';
 import { apiFetch } from '@/lib/api';
 import { onAuthStateChanged } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { auth, getFirebaseToken } from '@/lib/firebase';
 
 const MapComponent = dynamic(() => import('@/components/Map'), {
     ssr: false,
@@ -18,7 +18,10 @@ const MapComponent = dynamic(() => import('@/components/Map'), {
     ),
 });
 
-const REFRESH_INTERVAL = 10000;
+const REFRESH_INTERVAL = 10000; // polling interval in ms
+const LS_KEY = 'trackpro_live_mode';
+
+// ── Sub-components ────────────────────────────────────────────────────────────
 
 function IgnitionBadge({ ignition }) {
     if (ignition === null || ignition === undefined) return null;
@@ -70,17 +73,76 @@ function shortAddress(addr) {
     return parts.slice(0, 2).join(', ');
 }
 
+// ── Main Component ────────────────────────────────────────────────────────────
+
 export default function DashboardPage() {
     const router = useRouter();
+
+    // ── Core vehicle state ────────────────────────────────────────────────
     const [vehicles, setVehicles] = useState([]);
-    const [positions, setPositions] = useState([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [error, setError] = useState('');
     const [search, setSearch] = useState('');
     const [selectedVehicle, setSelectedVehicle] = useState(null);
-    const [lastUpdate, setLastUpdate] = useState(null);
-    const intervalRef = useRef(null);
+
+    // ── Live mode toggle ──────────────────────────────────────────────────
+    // 'poll' = existing 10s polling (default), 'ws' = SSE WebSocket mode
+    const [liveMode, setLiveMode] = useState(() => {
+        if (typeof window === 'undefined') return 'poll';
+        return localStorage.getItem(LS_KEY) || 'poll';
+    });
+    const [wsStatus, setWsStatus] = useState('disconnected'); // 'connected' | 'reconnecting' | 'error' | 'disconnected'
+
+    // ── Status indicator state ────────────────────────────────────────────
+    const [lastPollTime, setLastPollTime] = useState(null);   // Date when last poll completed
+    const [pollAgeSeconds, setPollAgeSeconds] = useState(0);  // seconds since last poll
+
+    // ── Refs ──────────────────────────────────────────────────────────────
+    const intervalRef = useRef(null);           // polling setInterval handle
+    const eventSourceRef = useRef(null);        // SSE EventSource instance
+    const pollAgeTimerRef = useRef(null);       // setInterval for the "Polled Xs ago" counter
+    const animatorRef = useRef(null);           // VehicleAnimator instance (browser only)
+    const vehiclesBaseRef = useRef([]);         // latest vehicle base data (without animated positions)
+    const toastTimerRef = useRef(null);
+
+    // ── Lazy-load VehicleAnimator (browser only) ──────────────────────────
+    useEffect(() => {
+        // Dynamic import so it never runs on the server
+        import('@/lib/vehicleAnimator').then(({ VehicleAnimator }) => {
+            const animator = new VehicleAnimator((deviceId, animPos) => {
+                // Called at 60fps with each device's current smooth position
+                setVehicles(prev => {
+                    const idx = prev.findIndex(v => v.id === deviceId);
+                    if (idx === -1) return prev;
+
+                    const updated = [...prev];
+                    updated[idx] = {
+                        ...updated[idx],
+                        position: {
+                            ...updated[idx].position,
+                            latitude: animPos.lat,
+                            longitude: animPos.lng,
+                            // Store bearing so Map.js can rotate the marker SVG
+                            bearing: animPos.bearing,
+                        },
+                    };
+                    return updated;
+                });
+            });
+            animatorRef.current = animator;
+            animator.start();
+        });
+
+        return () => {
+            if (animatorRef.current) {
+                animatorRef.current.stop();
+                animatorRef.current = null;
+            }
+        };
+    }, []);
+
+    // ── Vehicle data helpers (unchanged from original) ────────────────────
 
     const getVehicleStatus = useCallback((device, position) => {
         const s = (device.status || '').toLowerCase();
@@ -127,6 +189,41 @@ export default function DashboardPage() {
         });
     }, [getVehicleStatus]);
 
+    /**
+     * Feed newly polled/streamed vehicle positions into the animator.
+     * The animator will call our setVehicles updateCallback at 60fps.
+     */
+    const feedPositionsToAnimator = useCallback((mergedVehicles) => {
+        if (!animatorRef.current) {
+            // Animator not ready yet — set directly (no smoothing for first load)
+            setVehicles(mergedVehicles);
+            return;
+        }
+
+        // Push base data so cards show latest metadata (name, status, badges, etc.)
+        // We intentionally set state here to refresh non-position data.
+        // The animator will then override the position values per-frame.
+        setVehicles(mergedVehicles);
+        vehiclesBaseRef.current = mergedVehicles;
+
+        // Tell animator about each vehicle's new real position
+        for (const v of mergedVehicles) {
+            if (v.position) {
+                animatorRef.current.onNewPosition(v.id, {
+                    lat: v.position.latitude,
+                    lng: v.position.longitude,
+                    speed: v.position.speed,      // knots
+                    course: v.position.course,    // degrees
+                    timestamp: v.position.fixTime
+                        ? new Date(v.position.fixTime).getTime()
+                        : Date.now(),
+                });
+            }
+        }
+    }, []);
+
+    // ── Polling fetch (unchanged logic, same as original) ─────────────────
+
     const fetchData = useCallback(async (isInitial = false) => {
         try {
             if (!isInitial) setRefreshing(true);
@@ -134,30 +231,187 @@ export default function DashboardPage() {
                 const unsubscribe = onAuthStateChanged(auth, (u) => { unsubscribe(); resolve(u); });
             });
             if (!user) { router.push('/login'); return; }
+
             const [devicesRes, positionsRes] = await Promise.all([
                 apiFetch('/api/devices'),
                 apiFetch('/api/positions'),
             ]);
             if (devicesRes.status === 401 || positionsRes.status === 401) { router.push('/login'); return; }
+
             const devicesData = await devicesRes.json();
             const positionsData = await positionsRes.json();
+
             if (devicesRes.ok && positionsRes.ok) {
-                setVehicles(mergeVehicleData(devicesData, positionsData));
-                setPositions(positionsData);
-                setLastUpdate(new Date());
+                const merged = mergeVehicleData(devicesData, positionsData);
+                feedPositionsToAnimator(merged);
+                setLastPollTime(new Date());
+                setPollAgeSeconds(0);
                 setError('');
-            } else { setError('Failed to fetch vehicle data'); }
+            } else {
+                setError('Failed to fetch vehicle data');
+            }
         } catch (err) {
             console.error('Fetch error:', err);
             setError('Connection error. Retrying...');
-        } finally { setLoading(false); setRefreshing(false); }
-    }, [router, mergeVehicleData]);
+        } finally {
+            setLoading(false);
+            setRefreshing(false);
+        }
+    }, [router, mergeVehicleData, feedPositionsToAnimator]);
 
+    // ── Poll age counter ──────────────────────────────────────────────────
     useEffect(() => {
-        fetchData(true);
-        intervalRef.current = setInterval(() => fetchData(false), REFRESH_INTERVAL);
-        return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
-    }, [fetchData]);
+        if (pollAgeTimerRef.current) clearInterval(pollAgeTimerRef.current);
+
+        if (liveMode === 'poll' && lastPollTime) {
+            pollAgeTimerRef.current = setInterval(() => {
+                setPollAgeSeconds(Math.floor((Date.now() - lastPollTime.getTime()) / 1000));
+            }, 1000);
+        }
+
+        return () => {
+            if (pollAgeTimerRef.current) clearInterval(pollAgeTimerRef.current);
+        };
+    }, [liveMode, lastPollTime]);
+
+    // ── SSE WebSocket mode ────────────────────────────────────────────────
+
+    const startSSE = useCallback(async () => {
+        // Clean up any existing SSE connection
+        if (eventSourceRef.current) {
+            eventSourceRef.current.close();
+            eventSourceRef.current = null;
+        }
+
+        const token = await getFirebaseToken();
+        if (!token) {
+            console.error('[SSE] No Firebase token available');
+            return;
+        }
+
+        const url = `/api/live?token=${encodeURIComponent(token)}`;
+        const es = new EventSource(url);
+        eventSourceRef.current = es;
+
+        es.onmessage = (event) => {
+            let msg;
+            try { msg = JSON.parse(event.data); } catch { return; }
+
+            if (msg.type === 'reconnecting') {
+                setWsStatus('reconnecting');
+                return;
+            }
+            if (msg.type === 'connected') {
+                setWsStatus('connected');
+                return;
+            }
+            if (msg.type === 'no_devices') {
+                setWsStatus('connected'); // connected but no devices
+                return;
+            }
+            if (msg.type === 'position') {
+                // Feed into animator — it will call setVehicles at 60fps
+                if (animatorRef.current) {
+                    animatorRef.current.onNewPosition(msg.deviceId, {
+                        lat: msg.lat,
+                        lng: msg.lng,
+                        speed: msg.speed,
+                        course: msg.course,
+                        timestamp: msg.fixTime ? new Date(msg.fixTime).getTime() : Date.now(),
+                    });
+                }
+
+                // Also update non-position vehicle data (address, attributes, etc.)
+                setVehicles(prev => {
+                    const idx = prev.findIndex(v => v.id === msg.deviceId);
+                    if (idx === -1) return prev;
+                    const updated = [...prev];
+                    updated[idx] = {
+                        ...updated[idx],
+                        position: {
+                            ...updated[idx].position,
+                            speed: msg.speed,
+                            course: msg.course,
+                            fixTime: msg.fixTime,
+                            address: msg.address || updated[idx].position?.address,
+                            serverTime: msg.serverTime,
+                        },
+                        attrs: {
+                            ...updated[idx].attrs,
+                            ...(msg.attributes?.ignition !== undefined ? { ignition: msg.attributes.ignition } : {}),
+                            ...(msg.attributes?.batteryLevel !== undefined ? { batteryLevel: msg.attributes.batteryLevel } : {}),
+                            ...(msg.attributes?.alarm !== undefined ? { alarm: msg.attributes.alarm } : {}),
+                        },
+                    };
+                    return updated;
+                });
+            }
+        };
+
+        es.onerror = () => {
+            console.error('[SSE] EventSource error — falling back to polling');
+            es.close();
+            eventSourceRef.current = null;
+            setWsStatus('error');
+
+            // Automatic fallback to polling
+            setLiveMode('poll');
+            localStorage.setItem(LS_KEY, 'poll');
+
+            // Show error toast
+            setError('WebSocket unavailable, switched to polling');
+            if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+            toastTimerRef.current = setTimeout(() => setError(''), 5000);
+        };
+    }, []);
+
+    const stopSSE = useCallback(() => {
+        if (eventSourceRef.current) {
+            eventSourceRef.current.close();
+            eventSourceRef.current = null;
+        }
+        setWsStatus('disconnected');
+    }, []);
+
+    // ── Mode orchestration ────────────────────────────────────────────────
+    useEffect(() => {
+        if (liveMode === 'poll') {
+            // ── Polling mode ───────────────────────────────────────────────
+            stopSSE();
+            fetchData(true);
+            intervalRef.current = setInterval(() => fetchData(false), REFRESH_INTERVAL);
+            return () => {
+                if (intervalRef.current) clearInterval(intervalRef.current);
+            };
+        } else {
+            // ── WebSocket mode ─────────────────────────────────────────────
+            if (intervalRef.current) {
+                clearInterval(intervalRef.current);
+                intervalRef.current = null;
+            }
+            setRefreshing(false);
+
+            // Do one initial poll to get device list + base positions
+            fetchData(true).then(() => {
+                // Then switch to SSE stream
+                startSSE();
+            });
+
+            return () => {
+                stopSSE();
+            };
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [liveMode]);
+
+    // ── Toggle handler ────────────────────────────────────────────────────
+    const handleToggleMode = useCallback(() => {
+        const newMode = liveMode === 'poll' ? 'ws' : 'poll';
+        setLiveMode(newMode);
+        localStorage.setItem(LS_KEY, newMode);
+    }, [liveMode]);
+
+    // ── Derived state ─────────────────────────────────────────────────────
 
     const filteredVehicles = vehicles.filter((v) => {
         const q = search.toLowerCase();
@@ -185,6 +439,38 @@ export default function DashboardPage() {
         return `${Math.floor(diff / 86400)}d ago`;
     };
 
+    // ── Status indicator text + dot color ─────────────────────────────────
+    let statusDotColor = 'var(--success-500)';
+    let statusDotAnim = 'none';
+    let statusText = '';
+
+    if (liveMode === 'poll') {
+        if (refreshing) {
+            statusDotColor = 'var(--warning-500)';
+            statusDotAnim = 'alarm-pulse 0.8s ease-in-out infinite';
+            statusText = 'Updating...';
+        } else {
+            statusText = lastPollTime
+                ? (pollAgeSeconds < 5 ? 'Polled just now' : `Polled ${pollAgeSeconds}s ago`)
+                : 'Polling 10s';
+        }
+    } else {
+        // WebSocket mode
+        if (wsStatus === 'connected') {
+            statusDotColor = '#22c55e';
+            statusDotAnim = 'alarm-pulse 2s ease-in-out infinite';
+            statusText = 'Live';
+        } else if (wsStatus === 'reconnecting') {
+            statusDotColor = 'var(--warning-500)';
+            statusDotAnim = 'alarm-pulse 0.8s ease-in-out infinite';
+            statusText = 'Reconnecting...';
+        } else {
+            statusDotColor = 'var(--gray-400)';
+            statusText = 'Connecting...';
+        }
+    }
+
+    // ── Loading screen ────────────────────────────────────────────────────
     if (loading) {
         return (
             <div className="dashboard-shell">
@@ -199,6 +485,7 @@ export default function DashboardPage() {
         );
     }
 
+    // ── Render ────────────────────────────────────────────────────────────
     return (
         <div className="dashboard-shell">
             <NavBar />
@@ -281,7 +568,7 @@ export default function DashboardPage() {
                                             <div className="vehicle-info" style={{ flex: 1, minWidth: 0 }}>
                                                 <div className="float-vehicle-name">{vehicle.name}</div>
 
-                                                {/* ── Address line ── */}
+                                                {/* Address line */}
                                                 {addr ? (
                                                     <div style={{
                                                         fontSize: '0.6875rem', color: 'var(--gray-400)',
@@ -340,21 +627,75 @@ export default function DashboardPage() {
                     </div>
                 </div>
 
-                {/* Sync indicator */}
+                {/* ===== Top-right controls: status indicator + mode toggle ===== */}
                 <div style={{
                     position: 'absolute', top: '1rem', right: '1rem', zIndex: 1000,
-                    display: 'flex', alignItems: 'center', gap: '0.375rem',
-                    background: 'white', border: '1px solid var(--gray-200)',
-                    borderRadius: 'var(--radius-full)', padding: '0.3rem 0.75rem',
-                    boxShadow: 'var(--shadow-sm)', fontSize: '0.75rem', color: 'var(--gray-700)',
+                    display: 'flex', alignItems: 'center', gap: '0.5rem',
                 }}>
-                    <span style={{
-                        width: 7, height: 7, borderRadius: '50%',
-                        background: refreshing ? 'var(--warning-500)' : 'var(--success-500)',
-                        display: 'inline-block',
-                        animation: refreshing ? 'alarm-pulse 0.8s ease-in-out infinite' : 'none',
-                    }} />
-                    {refreshing ? 'Updating...' : lastUpdate ? `Updated Just now` : 'Live'}
+                    {/* Mode toggle button */}
+                    <button
+                        onClick={handleToggleMode}
+                        title={liveMode === 'poll' ? 'Switch to WebSocket live mode' : 'Switch to polling mode'}
+                        style={{
+                            display: 'inline-flex', alignItems: 'center', gap: '0.35rem',
+                            padding: '0.3rem 0.75rem',
+                            borderRadius: 'var(--radius-full)',
+                            border: 'none',
+                            cursor: 'pointer',
+                            fontSize: '0.72rem',
+                            fontWeight: 600,
+                            letterSpacing: '0.02em',
+                            transition: 'background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease',
+                            ...(liveMode === 'ws'
+                                ? {
+                                    background: 'linear-gradient(135deg, #16a34a, #15803d)',
+                                    color: 'white',
+                                    boxShadow: '0 0 0 2px #bbf7d0, 0 2px 8px rgba(22,163,74,0.3)',
+                                }
+                                : {
+                                    background: 'var(--gray-100)',
+                                    color: 'var(--gray-600)',
+                                    boxShadow: 'none',
+                                }),
+                        }}
+                    >
+                        {liveMode === 'ws' ? (
+                            <>
+                                {/* Pulsing live dot */}
+                                <span style={{
+                                    width: 6, height: 6, borderRadius: '50%',
+                                    background: '#86efac',
+                                    display: 'inline-block',
+                                    animation: 'alarm-pulse 1.5s ease-in-out infinite',
+                                }} />
+                                Live WebSocket
+                            </>
+                        ) : (
+                            <>
+                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                    <polyline points="23 4 23 10 17 10" /><polyline points="1 20 1 14 7 14" />
+                                    <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+                                </svg>
+                                Polling 10s
+                            </>
+                        )}
+                    </button>
+
+                    {/* Status indicator pill */}
+                    <div style={{
+                        display: 'flex', alignItems: 'center', gap: '0.375rem',
+                        background: 'white', border: '1px solid var(--gray-200)',
+                        borderRadius: 'var(--radius-full)', padding: '0.3rem 0.75rem',
+                        boxShadow: 'var(--shadow-sm)', fontSize: '0.75rem', color: 'var(--gray-700)',
+                    }}>
+                        <span style={{
+                            width: 7, height: 7, borderRadius: '50%',
+                            background: statusDotColor,
+                            display: 'inline-block',
+                            animation: statusDotAnim,
+                        }} />
+                        {statusText}
+                    </div>
                 </div>
 
                 {error && (
