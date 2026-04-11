@@ -24,7 +24,7 @@ const DEFAULT_ZOOM = 5;
 function createPinIcon(status, isSelected) {
     const color = STATUS_COLORS[status] || STATUS_COLORS.offline;
     const size = isSelected ? 38 : 30;
-    
+
     // Google Maps requires string encoded SVG
     const svg = `
         <svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size * 1.4}" viewBox="0 0 30 42">
@@ -126,7 +126,7 @@ export default function Map({ vehicles, selectedVehicle, onVehicleSelect }) {
     // When user selects a vehicle: fly to it
     useEffect(() => {
         if (!selectedVehicle || !map || !window.google) return;
-        
+
         const vehicle = vehicles.find((v) => v.id === selectedVehicle);
         if (vehicle?.position) {
             map.panTo({ lat: vehicle.position.latitude, lng: vehicle.position.longitude });
@@ -146,6 +146,7 @@ export default function Map({ vehicles, selectedVehicle, onVehicleSelect }) {
             onLoad={onLoad}
             onUnmount={onUnmount}
             options={{
+                mapId: process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID || 'DEMO_MAP_ID',
                 mapTypeControl: false,
                 streetViewControl: false,
                 fullscreenControl: true,
@@ -154,7 +155,7 @@ export default function Map({ vehicles, selectedVehicle, onVehicleSelect }) {
         >
             {positionedVehicles.map((vehicle) => {
                 const isSelected = vehicle.id === selectedVehicle;
-                
+
                 return (
                     <MarkerF
                         key={vehicle.id}
