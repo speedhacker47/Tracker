@@ -99,7 +99,7 @@ const mapContainerStyle = {
  * across position updates. Only marker.position is updated each render,
  * the DOM element is never recreated. Bearing is applied via CSS transform.
  */
-export default function Map({ vehicles, selectedVehicle, onVehicleSelect }) {
+export default function Map({ vehicles = [], selectedVehicle = null, onVehicleSelect = () => {} }) {
     const { isLoaded } = useJsApiLoader({
         id: 'google-map-script',
         googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '',

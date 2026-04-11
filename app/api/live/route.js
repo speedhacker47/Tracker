@@ -31,7 +31,13 @@ import { getUserTraccarIds } from '@/lib/ownership';
 // Node.js ws package for server-side WebSocket
 import WebSocket from 'ws';
 
-const TRACCAR_INTERNAL_URL = process.env.TRACCAR_INTERNAL_URL || 'http://traccar:8082';
+// TRACCAR_INTERNAL_URL is for Docker-internal access (e.g. http://traccar:8082)
+// TRACCAR_URL is the public URL used from Vercel / external servers
+// If running on Vercel, set TRACCAR_URL to http://<EC2_PUBLIC_IP>:8082
+const TRACCAR_INTERNAL_URL =
+    process.env.TRACCAR_INTERNAL_URL ||
+    process.env.TRACCAR_URL ||
+    'http://traccar:8082';
 const TRACCAR_USER = process.env.TRACCAR_USER || '';
 const TRACCAR_PASS = process.env.TRACCAR_PASS || '';
 const RECONNECT_DELAY_MS = 3000;
