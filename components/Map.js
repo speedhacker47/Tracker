@@ -1,9 +1,9 @@
 'use client';
 
 import { useEffect, useRef, useMemo, useState, useCallback } from 'react';
-import { GoogleMap, useJsApiLoader, MarkerF, InfoWindowF } from '@react-google-maps/api';
+import { GoogleMap, useJsApiLoader, InfoWindowF } from '@react-google-maps/api';
 
-// IMPORTANT: Must match HistoryMap.js exactly. The Google Maps loader throws
+// IMPORTANT: Must match JourneyMap.js exactly. The Google Maps loader throws
 // "Loader must not be called again with different options" if two components
 // call useJsApiLoader with the same id but different libraries.
 const GOOGLE_MAPS_LIBRARIES = ['geometry', 'marker'];
@@ -19,27 +19,44 @@ const DEFAULT_CENTER = { lat: 20.5937, lng: 78.9629 };
 const DEFAULT_ZOOM = 5;
 
 /**
- * Build a custom SVG pin icon for a given status.
+ * Build the SVG for a vehicle marker at a given bearing.
+ * The marker is a directional arrow + colored status ring.
+ * Bearing rotation is applied via CSS transform on the element,
+ * not baked into the SVG, so we can update it without recreating the marker.
  */
-function createPinIcon(status, isSelected) {
+function createMarkerElement(status, isSelected) {
     const color = STATUS_COLORS[status] || STATUS_COLORS.offline;
     const size = isSelected ? 38 : 30;
 
     // Google Maps requires string encoded SVG
     const svg = `
         <svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size * 1.4}" viewBox="0 0 30 42">
-            <!-- Pin body -->
             <path d="M15 0 C6.716 0 0 6.716 0 15 C0 23.5 15 42 15 42 C15 42 30 23.5 30 15 C30 6.716 23.284 0 15 0 Z" fill="${color}" />
             <circle cx="15" cy="15" r="7" fill="white" opacity="0.9"/>
-            <circle cx="15" cy="15" r="4" fill="${color}"/>
+            <path d="M15 7 L19 15 L15 12 L11 15 Z" fill="${color}"/>
         </svg>
     `.trim();
 
-    return {
-        url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`,
-        scaledSize: typeof window !== 'undefined' && window.google ? new window.google.maps.Size(size, size * 1.4) : null,
-        anchor: typeof window !== 'undefined' && window.google ? new window.google.maps.Point(size / 2, size * 1.4) : null,
-    };
+    const wrapper = document.createElement('div');
+    wrapper.style.cssText = [
+        `width:${size}px`,
+        `height:${size * 1.4}px`,
+        'transform-origin:50% 50%',
+        // 150ms CSS transition provides an additional smoothness layer on top of
+        // the JS rAF animation — eliminates any sub-frame jitter
+        'transition:transform 150ms ease',
+        'will-change:transform',
+        'cursor:pointer',
+    ].join(';');
+
+    const img = document.createElement('img');
+    img.src = `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+    img.width = size;
+    img.height = Math.round(size * 1.4);
+    img.style.cssText = 'display:block;pointer-events:none';
+    wrapper.appendChild(img);
+
+    return wrapper;
 }
 
 // Format relative time
@@ -76,7 +93,12 @@ const mapContainerStyle = {
     width: '100%'
 };
 
-export default function Map({ vehicles, selectedVehicle, onVehicleSelect }) {
+/**
+ * Map component — uses AdvancedMarkerElement instances that are kept alive
+ * across position updates. Only marker.position is updated each render,
+ * the DOM element is never recreated. Bearing is applied via CSS transform.
+ */
+export default function TrackerMap({ vehicles = [], selectedVehicle = null, onVehicleSelect = () => { } }) {
     const { isLoaded } = useJsApiLoader({
         id: 'google-map-script',
         googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '',
@@ -84,13 +106,19 @@ export default function Map({ vehicles, selectedVehicle, onVehicleSelect }) {
     });
 
     const [map, setMap] = useState(null);
+    const [infoVehicleId, setInfoVehicleId] = useState(null);
     const initialFitDone = useRef(false);
 
-    const onLoad = useCallback(function callback(map) {
-        setMap(map);
+    // Map of deviceId → AdvancedMarkerElement (kept alive across renders)
+    const markersRef = useRef(new Map());
+    // Map of deviceId → last vehicle data (for info window)
+    const vehicleDataRef = useRef(new Map());
+
+    const onLoad = useCallback((mapInstance) => {
+        setMap(mapInstance);
     }, []);
 
-    const onUnmount = useCallback(function callback(map) {
+    const onUnmount = useCallback(() => {
         setMap(null);
     }, []);
 
@@ -100,7 +128,100 @@ export default function Map({ vehicles, selectedVehicle, onVehicleSelect }) {
         [vehicles]
     );
 
-    // Auto-fit map to show all vehicle positions, or fly to selected vehicle
+    // ── Marker management: create / update / remove markers ───────────────────
+    useEffect(() => {
+        if (!map || !window.google || !window.google.maps.marker) return;
+        const { AdvancedMarkerElement } = window.google.maps.marker;
+
+        // Update vehicleData ref for info window use
+        for (const v of vehicles) {
+            vehicleDataRef.current.set(v.id, v);
+        }
+
+        // Set of IDs currently in vehicles prop
+        const currentIds = new Set(vehicles.map(v => v.id));
+
+        // Remove markers for vehicles no longer in the list
+        for (const [id, marker] of markersRef.current) {
+            if (!currentIds.has(id)) {
+                marker.map = null;
+                markersRef.current.delete(id);
+            }
+        }
+
+        // Create or update markers for each vehicle
+        for (const vehicle of vehicles) {
+            const hasPosition = vehicle.position?.latitude && vehicle.position?.longitude;
+            const isSelected = vehicle.id === selectedVehicle;
+            const bearing = vehicle.position?.bearing ?? vehicle.position?.course ?? 0;
+
+            if (!hasPosition) {
+                // Hide marker if no position
+                const m = markersRef.current.get(vehicle.id);
+                if (m) m.map = null;
+                continue;
+            }
+
+            const pos = {
+                lat: vehicle.position.latitude,
+                lng: vehicle.position.longitude,
+            };
+
+            if (!markersRef.current.has(vehicle.id)) {
+                // ── Create new marker ──────────────────────────────────────
+                const el = createMarkerElement(vehicle.status, isSelected);
+
+                // Apply initial bearing rotation
+                el.style.transform = `rotate(${Math.round(bearing)}deg)`;
+
+                const marker = new AdvancedMarkerElement({
+                    position: pos,
+                    map,
+                    zIndex: isSelected ? 1000 : 1,
+                    content: el,
+                    title: vehicle.name,
+                });
+
+                // Click to select
+                marker.addListener('click', () => {
+                    setInfoVehicleId(prev => prev === vehicle.id ? null : vehicle.id);
+                    onVehicleSelect(vehicle.id);
+                });
+
+                markersRef.current.set(vehicle.id, marker);
+            } else {
+                // ── Update existing marker in-place (no recreation) ────────
+                const marker = markersRef.current.get(vehicle.id);
+
+                // Re-show if it was hidden
+                if (!marker.map) marker.map = map;
+
+                // Update position (Google Maps will animate this internally)
+                marker.position = pos;
+
+                // Update zIndex for selection state
+                marker.zIndex = isSelected ? 1000 : 1;
+
+                // Update bearing via CSS transform on the content element
+                // The 150ms CSS transition handles micro-smoothing
+                if (marker.content) {
+                    marker.content.style.transform = `rotate(${Math.round(bearing)}deg)`;
+                }
+
+                // Rebuild icon if selection state changed (different size)
+                // We check the current content size vs desired size
+                const currentSize = marker.content?.style?.width;
+                const desiredSize = `${isSelected ? 38 : 30}px`;
+                if (currentSize !== desiredSize) {
+                    const el = createMarkerElement(vehicle.status, isSelected);
+                    el.style.transform = `rotate(${Math.round(bearing)}deg)`;
+                    marker.content = el;
+                }
+            }
+        }
+    }, [map, vehicles, selectedVehicle, onVehicleSelect]);
+
+    // ── Auto-fit map on first load ────────────────────────────────────────────
     useEffect(() => {
         if (!map || !window.google) return;
 
@@ -123,9 +244,10 @@ export default function Map({ vehicles, selectedVehicle, onVehicleSelect }) {
         }
     }, [map, vehicles]);
 
-    // When user selects a vehicle: fly to it
+    // ── Fly to selected vehicle ───────────────────────────────────────────────
     useEffect(() => {
         if (!selectedVehicle || !map || !window.google) return;
+
 
         const vehicle = vehicles.find((v) => v.id === selectedVehicle);
         if (vehicle?.position) {
@@ -134,9 +256,30 @@ export default function Map({ vehicles, selectedVehicle, onVehicleSelect }) {
         }
     }, [selectedVehicle, vehicles, map]);
 
+    // ── Sync info window state with selectedVehicle prop ─────────────────────
+    useEffect(() => {
+        if (selectedVehicle !== infoVehicleId) {
+            setInfoVehicleId(selectedVehicle);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [selectedVehicle]);
+
+    // ── Clean up all markers on unmount ──────────────────────────────────────
+    useEffect(() => {
+        return () => {
+            for (const marker of markersRef.current.values()) {
+                marker.map = null;
+            }
+            markersRef.current.clear();
+        };
+    }, []);
+
     if (!isLoaded) {
         return <div className="flex h-full w-full items-center justify-center bg-gray-50 text-gray-400">Loading Maps...</div>;
     }
+
+    // Find selected vehicle data for info window
+    const infoVehicle = infoVehicleId ? vehicleDataRef.current.get(infoVehicleId) : null;
 
     return (
         <GoogleMap
@@ -209,4 +352,3 @@ export default function Map({ vehicles, selectedVehicle, onVehicleSelect }) {
         </GoogleMap>
     );
 }
-
