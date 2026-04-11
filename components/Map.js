@@ -30,10 +30,8 @@ function createMarkerElement(status, isSelected) {
 
     const svg = `
         <svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size * 1.4}" viewBox="0 0 30 42">
-            <!-- Pin body -->
             <path d="M15 0 C6.716 0 0 6.716 0 15 C0 23.5 15 42 15 42 C15 42 30 23.5 30 15 C30 6.716 23.284 0 15 0 Z" fill="${color}" />
             <circle cx="15" cy="15" r="7" fill="white" opacity="0.9"/>
-            <!-- Direction triangle (points up = North = 0°) -->
             <path d="M15 7 L19 15 L15 12 L11 15 Z" fill="${color}"/>
         </svg>
     `.trim();
@@ -99,7 +97,7 @@ const mapContainerStyle = {
  * across position updates. Only marker.position is updated each render,
  * the DOM element is never recreated. Bearing is applied via CSS transform.
  */
-export default function Map({ vehicles = [], selectedVehicle = null, onVehicleSelect = () => {} }) {
+export default function TrackerMap({ vehicles = [], selectedVehicle = null, onVehicleSelect = () => { } }) {
     const { isLoaded } = useJsApiLoader({
         id: 'google-map-script',
         googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '',
