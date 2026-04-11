@@ -17,8 +17,9 @@ jobs:
           username: ${{ secrets.AWS_USER }}
           key: ${{ secrets.AWS_SSH_KEY }}
           script: |
-            # Pull latest code
-            git -C ${{ secrets.AWS_PROJECT_PATH }}/tracker pull origin master
+            # Reset to origin/master to avoid sync issues
+            git -C ${{ secrets.AWS_PROJECT_PATH }}/tracker fetch origin master
+            git -C ${{ secrets.AWS_PROJECT_PATH }}/tracker reset --hard origin/master
           
             # Rebuild API container
             cd ${{ secrets.AWS_PROJECT_PATH }}
