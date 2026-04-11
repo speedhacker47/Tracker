@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback, useImperativeHandle, forwardRef } from 'react';
 import { GoogleMap, useJsApiLoader } from '@react-google-maps/api';
 
-const GOOGLE_MAPS_LIBRARIES = ['geometry', 'marker'];
+const GOOGLE_MAPS_LIBRARIES = ['marker', 'geometry'];
 const mapContainerStyle = { height: '100%', width: '100%' };
 const MAP_OPTIONS = {
     mapId: process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID || 'DEMO_MAP_ID',
