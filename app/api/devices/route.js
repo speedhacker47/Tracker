@@ -26,7 +26,6 @@ export async function GET(request) {
             traccarIdToMeta.set(Number(row.traccar_id), {
                 vehicleName: row.vehicle_name,
                 vehicleNumber: row.vehicle_number,
-                imei: row.imei,
             });
         }
 
@@ -44,8 +43,8 @@ export async function GET(request) {
                 return {
                     ...d,
                     name: meta.vehicleName || d.name,
-                    vehicleNumber: meta.vehicleNumber || d.uniqueId,
-                    imei: meta.imei,
+                    vehicleNumber: meta.vehicleNumber || null,
+                    imei: d.uniqueId,   // IMEI comes from Traccar's uniqueId field
                 };
             });
 
