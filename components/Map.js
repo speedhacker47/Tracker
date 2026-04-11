@@ -1,12 +1,10 @@
 'use client';
 
 import { useEffect, useRef, useMemo, useState, useCallback } from 'react';
-import { GoogleMap, useJsApiLoader, InfoWindowF, MarkerF } from '@react-google-maps/api';
+import { GoogleMap, useJsApiLoader, InfoWindowF } from '@react-google-maps/api';
 
-// IMPORTANT: Must match JourneyMap.js exactly. The Google Maps loader throws
-// "Loader must not be called again with different options" if two components
-// call useJsApiLoader with the same id but different libraries.
-const GOOGLE_MAPS_LIBRARIES = ['geometry', 'marker'];
+// IMPORTANT: Must match JourneyMap.js exactly.
+const GOOGLE_MAPS_LIBRARIES = ['marker', 'geometry'];
 
 // Status colors matching the design system
 const STATUS_COLORS = {
@@ -21,8 +19,6 @@ const DEFAULT_ZOOM = 5;
 /**
  * Build the SVG for a vehicle marker at a given bearing.
  * The marker is a directional arrow + colored status ring.
- * Bearing rotation is applied via CSS transform on the element,
- * not baked into the SVG, so we can update it without recreating the marker.
  */
 function createMarkerElement(status, isSelected) {
     const color = STATUS_COLORS[status] || STATUS_COLORS.offline;
@@ -42,8 +38,6 @@ function createMarkerElement(status, isSelected) {
         `width:${size}px`,
         `height:${size * 1.4}px`,
         'transform-origin:50% 50%',
-        // 150ms CSS transition provides an additional smoothness layer on top of
-        // the JS rAF animation — eliminates any sub-frame jitter
         'transition:transform 150ms ease',
         'will-change:transform',
         'cursor:pointer',
@@ -122,12 +116,6 @@ export default function TrackerMap({ vehicles = [], selectedVehicle = null, onVe
         setMap(null);
     }, []);
 
-    // Only show vehicles that have GPS positions
-    const positionedVehicles = useMemo(
-        () => vehicles.filter((v) => v.position?.latitude && v.position?.longitude),
-        [vehicles]
-    );
-
     // ── Marker management: create / update / remove markers ───────────────────
     useEffect(() => {
         if (!map || !window.google || !window.google.maps.marker) return;
@@ -156,7 +144,6 @@ export default function TrackerMap({ vehicles = [], selectedVehicle = null, onVe
             const bearing = vehicle.position?.bearing ?? vehicle.position?.course ?? 0;
 
             if (!hasPosition) {
-                // Hide marker if no position
                 const m = markersRef.current.get(vehicle.id);
                 if (m) m.map = null;
                 continue;
@@ -170,8 +157,6 @@ export default function TrackerMap({ vehicles = [], selectedVehicle = null, onVe
             if (!markersRef.current.has(vehicle.id)) {
                 // ── Create new marker ──────────────────────────────────────
                 const el = createMarkerElement(vehicle.status, isSelected);
-
-                // Apply initial bearing rotation
                 el.style.transform = `rotate(${Math.round(bearing)}deg)`;
 
                 const marker = new AdvancedMarkerElement({
@@ -182,7 +167,6 @@ export default function TrackerMap({ vehicles = [], selectedVehicle = null, onVe
                     title: vehicle.name,
                 });
 
-                // Click to select
                 marker.addListener('click', () => {
                     setInfoVehicleId(prev => prev === vehicle.id ? null : vehicle.id);
                     onVehicleSelect(vehicle.id);
@@ -190,29 +174,20 @@ export default function TrackerMap({ vehicles = [], selectedVehicle = null, onVe
 
                 markersRef.current.set(vehicle.id, marker);
             } else {
-                // ── Update existing marker in-place (no recreation) ────────
+                // ── Update existing marker in-place ────────────────────────
                 const marker = markersRef.current.get(vehicle.id);
-
-                // Re-show if it was hidden
                 if (!marker.map) marker.map = map;
-
-                // Update position (Google Maps will animate this internally)
                 marker.position = pos;
-
-                // Update zIndex for selection state
                 marker.zIndex = isSelected ? 1000 : 1;
 
-                // Update bearing via CSS transform on the content element
-                // The 150ms CSS transition handles micro-smoothing
                 if (marker.content) {
                     marker.content.style.transform = `rotate(${Math.round(bearing)}deg)`;
                 }
 
-                // Rebuild icon if selection state changed (different size)
-                // We check the current content size vs desired size
-                const currentSize = marker.content?.style?.width;
-                const desiredSize = `${isSelected ? 38 : 30}px`;
-                if (currentSize !== desiredSize) {
+                // Rebuild icon if selection state changed (size difference)
+                const currentWidth = marker.content?.style?.width;
+                const desiredWidth = `${isSelected ? 38 : 30}px`;
+                if (currentWidth !== desiredWidth) {
                     const el = createMarkerElement(vehicle.status, isSelected);
                     el.style.transform = `rotate(${Math.round(bearing)}deg)`;
                     marker.content = el;
@@ -248,7 +223,6 @@ export default function TrackerMap({ vehicles = [], selectedVehicle = null, onVe
     useEffect(() => {
         if (!selectedVehicle || !map || !window.google) return;
 
-
         const vehicle = vehicles.find((v) => v.id === selectedVehicle);
         if (vehicle?.position) {
             map.panTo({ lat: vehicle.position.latitude, lng: vehicle.position.longitude });
@@ -261,8 +235,7 @@ export default function TrackerMap({ vehicles = [], selectedVehicle = null, onVe
         if (selectedVehicle !== infoVehicleId) {
             setInfoVehicleId(selectedVehicle);
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [selectedVehicle]);
+    }, [selectedVehicle, infoVehicleId]);
 
     // ── Clean up all markers on unmount ──────────────────────────────────────
     useEffect(() => {
@@ -278,7 +251,6 @@ export default function TrackerMap({ vehicles = [], selectedVehicle = null, onVe
         return <div className="flex h-full w-full items-center justify-center bg-gray-50 text-gray-400">Loading Maps...</div>;
     }
 
-    // Find selected vehicle data for info window
     const infoVehicle = infoVehicleId ? vehicleDataRef.current.get(infoVehicleId) : null;
 
     return (
@@ -296,59 +268,51 @@ export default function TrackerMap({ vehicles = [], selectedVehicle = null, onVe
                 zoomControl: true,
             }}
         >
-            {positionedVehicles.map((vehicle) => {
-                const isSelected = vehicle.id === selectedVehicle;
-
-                return (
-                    <MarkerF
-                        key={vehicle.id}
-                        position={{ lat: vehicle.position.latitude, lng: vehicle.position.longitude }}
-                        icon={createPinIcon(vehicle.status, isSelected)}
-                        onClick={() => onVehicleSelect(vehicle.id)}
-                        zIndex={isSelected ? 1000 : undefined}
-                    >
-                        {isSelected && (
-                            <InfoWindowF
-                                position={{ lat: vehicle.position.latitude, lng: vehicle.position.longitude }}
-                                onCloseClick={() => onVehicleSelect(null)}
-                                options={{
-                                    pixelOffset: new window.google.maps.Size(0, -isSelected ? 53 : 45), // Adjust based on icon size
-                                    disableAutoPan: false
-                                }}
-                            >
-                                <div className="popup-content">
-                                    <div className="popup-title">{vehicle.name}</div>
-                                    <div className="popup-subtitle">{vehicle.uniqueId}</div>
-                                    <div className="popup-details">
-                                        <div className="popup-row">
-                                            <span className="popup-row-label">Status</span>
-                                            <StatusBadge status={vehicle.status} />
-                                        </div>
-                                        <div className="popup-row">
-                                            <span className="popup-row-label">Speed</span>
-                                            <span className="popup-row-value">
-                                                {Math.round(vehicle.position.speed * 1.852)} km/h
-                                            </span>
-                                        </div>
-                                        <div className="popup-row">
-                                            <span className="popup-row-label">Last Update</span>
-                                            <span className="popup-row-value">
-                                                {formatTimeAgo(vehicle.position.fixTime)}
-                                            </span>
-                                        </div>
-                                        <div className="popup-row">
-                                            <span className="popup-row-label">Coordinates</span>
-                                            <span className="popup-row-value" style={{ fontSize: '0.75rem' }}>
-                                                {vehicle.position.latitude.toFixed(5)}, {vehicle.position.longitude.toFixed(5)}
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </InfoWindowF>
-                        )}
-                    </MarkerF>
-                );
-            })}
+            {infoVehicle && (
+                <InfoWindowF
+                    position={{ 
+                        lat: infoVehicle.position.latitude, 
+                        lng: infoVehicle.position.longitude 
+                    }}
+                    onCloseClick={() => {
+                        setInfoVehicleId(null);
+                        onVehicleSelect(null);
+                    }}
+                    options={{
+                        pixelOffset: new window.google.maps.Size(0, -38),
+                        disableAutoPan: false
+                    }}
+                >
+                    <div className="popup-content">
+                        <div className="popup-title">{infoVehicle.name}</div>
+                        <div className="popup-subtitle">{infoVehicle.uniqueId}</div>
+                        <div className="popup-details">
+                            <div className="popup-row">
+                                <span className="popup-row-label">Status</span>
+                                <StatusBadge status={infoVehicle.status} />
+                            </div>
+                            <div className="popup-row">
+                                <span className="popup-row-label">Speed</span>
+                                <span className="popup-row-value">
+                                    {Math.round(infoVehicle.position.speed * 1.852)} km/h
+                                </span>
+                            </div>
+                            <div className="popup-row">
+                                <span className="popup-row-label">Last Update</span>
+                                <span className="popup-row-value">
+                                    {formatTimeAgo(infoVehicle.position.fixTime || infoVehicle.position.deviceTime)}
+                                </span>
+                            </div>
+                            <div className="popup-row">
+                                <span className="popup-row-label">Coordinates</span>
+                                <span className="popup-row-value" style={{ fontSize: '0.75rem' }}>
+                                    {infoVehicle.position.latitude.toFixed(5)}, {infoVehicle.position.longitude.toFixed(5)}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </InfoWindowF>
+            )}
         </GoogleMap>
     );
 }
