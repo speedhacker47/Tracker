@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useMemo, useState, useCallback } from 'react';
-import { GoogleMap, useJsApiLoader, InfoWindowF } from '@react-google-maps/api';
+import { GoogleMap, useJsApiLoader, InfoWindowF, MarkerF } from '@react-google-maps/api';
 
 // IMPORTANT: Must match JourneyMap.js exactly. The Google Maps loader throws
 // "Loader must not be called again with different options" if two components
