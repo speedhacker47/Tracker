@@ -29,15 +29,25 @@ export default function RootLayout({ children }) {
                 <script dangerouslySetInnerHTML={{ __html: `
                     (function() {
                         try {
+                            // Three ways to be detected as the mobile app:
+                            // 1. Cookie 'tp_app=1' already set from a prior visit
+                            // 2. ?source=app in URL (first hit from WebView deep link)
+                            // 3. #source=app hash (survives all redirects, never sent to server)
+                            // 4. User-Agent contains 'TrackProApp' (set by React Native WebView)
+                            var hasCookie = document.cookie.indexOf('tp_app=1') !== -1;
                             var ua = navigator.userAgent || '';
-                            var isApp = ua.indexOf('TrackProApp') !== -1 ||
-                                        window.location.search.indexOf('source=app') !== -1;
+                            var search = window.location.search || '';
+                            var hash = window.location.hash || '';
+                            var isApp = hasCookie ||
+                                        ua.indexOf('TrackProApp') !== -1 ||
+                                        search.indexOf('source=app') !== -1 ||
+                                        hash.indexOf('source=app') !== -1;
                             if (isApp) {
                                 document.documentElement.classList.add('mobile-app');
-                                // Persist across SPA navigations
-                                sessionStorage.setItem('trackpro_is_app', '1');
-                            } else if (sessionStorage.getItem('trackpro_is_app') === '1') {
-                                document.documentElement.classList.add('mobile-app');
+                                // Persist as a 1-year cookie — survives all SPA navigation & auth redirects
+                                if (!hasCookie) {
+                                    document.cookie = 'tp_app=1; path=/; max-age=31536000; SameSite=Lax';
+                                }
                             }
                         } catch(e) {}
                     })();
