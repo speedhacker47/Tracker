@@ -86,6 +86,16 @@ export default function DashboardPage() {
     const [search, setSearch] = useState('');
     const [selectedVehicle, setSelectedVehicle] = useState(null);
 
+    // ── Mobile: vehicle panel visibility (toggle via "Live" tab) ─────────────
+    const [mobilePanelOpen, setMobilePanelOpen] = useState(false);
+
+    // Listen for the mobile Live-tab custom toggle event dispatched by NavBar
+    useEffect(() => {
+        const handler = () => setMobilePanelOpen(v => !v);
+        window.addEventListener('trackpro:toggle-live-panel', handler);
+        return () => window.removeEventListener('trackpro:toggle-live-panel', handler);
+    }, []);
+
     // ── Live mode toggle ──────────────────────────────────────────────────
     // 'poll' = existing 10s polling (default), 'ws' = SSE WebSocket mode
     const [liveMode, setLiveMode] = useState(() => {
@@ -519,7 +529,7 @@ export default function DashboardPage() {
                     </div>
 
                     {/* Vehicle list card */}
-                    <div className="float-vehicles-card">
+                    <div className={`float-vehicles-card${mobilePanelOpen ? ' mobile-panel-open' : ''}`}>
                         <div className="float-search-row">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: 'var(--gray-500)', flexShrink: 0 }}>
                                 <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />

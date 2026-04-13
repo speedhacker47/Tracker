@@ -258,12 +258,26 @@ export default function JourneyPage() {
         outline: 'none', boxSizing: 'border-box',
     };
 
+    // ── Mobile sidebar toggle ──────────────────────────────────────────
+    const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+    const closeMobileSidebar = () => setMobileSidebarOpen(false);
+
+    // Auto-close sidebar on mobile when journey data loads
+    useEffect(() => {
+        if (segments.length > 0 || stops.length > 0) {
+            setMobileSidebarOpen(false);
+        }
+    }, [segments.length, stops.length]);
+
+
     return (
         <div className="dashboard-shell">
             <NavBar />
 
             {/* ── Left sidebar ── */}
-            <aside style={{
+            <aside
+                className={mobileSidebarOpen ? 'mobile-open' : ''}
+                style={{
                 width: 280, minWidth: 280, height: '100vh',
                 display: 'flex', flexDirection: 'column',
                 background: 'white', borderRight: '1px solid var(--gray-200)',
@@ -609,6 +623,24 @@ export default function JourneyPage() {
                     )}
                 </div>
             </aside>
+
+            {/* Mobile backdrop */}
+            <div
+                className={`mobile-drawer-backdrop${mobileSidebarOpen ? ' open' : ''}`}
+                onClick={closeMobileSidebar}
+            />
+
+            {/* Mobile FAB to open journey sidebar */}
+            <button
+                className="mobile-journey-fab"
+                onClick={() => setMobileSidebarOpen(v => !v)}
+                aria-label="Journey controls"
+            >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+                </svg>
+                {mobileSidebarOpen ? 'Close' : (hasData ? selectedDeviceObj?.name?.split(' ')[0] || 'Route' : 'Select Route')}
+            </button>
 
             {/* ── Main area: Timeline + Map ── */}
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden', background: '#eef2f7' }}>

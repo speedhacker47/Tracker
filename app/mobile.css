@@ -9,34 +9,20 @@
 
 /* ── 1. Global mobile base ─────────────────────────────────── */
 .mobile-app {
-    /* Prevent iOS text resize quirk */
     -webkit-text-size-adjust: 100%;
-    /* Better touch targets */
     touch-action: manipulation;
 }
 
 .mobile-app body {
-    /* Remove any rubber-band scroll on body */
     overscroll-behavior: none;
-    /* Use system font stack (faster on low-end devices) */
     font-family: -apple-system, 'Inter', sans-serif;
 }
 
-/* Disable hover-only state changes — not relevant on touch */
-.mobile-app *:hover {
-    /* let onMouseEnter/Leave JS still work for now,
-       but don't rely on CSS :hover for visual changes */
-}
-
 /* ── 2. Dashboard shell — stack vertical on mobile ─────────── */
-/*
- * Desktop: NavBar (left, 54–230px) + content (flex: 1) side by side.
- * Mobile:  Content takes full width. NavBar hidden. Bottom tab bar shows.
- */
 .mobile-app .dashboard-shell {
     flex-direction: column;
-    height: calc(100vh - 60px); /* reserve space for bottom tab bar */
-    height: calc(100dvh - 60px); /* dynamic viewport on Android Chrome */
+    height: calc(100vh - 60px);
+    height: calc(100dvh - 60px);
     overflow: hidden;
 }
 
@@ -62,7 +48,6 @@
     z-index: 9999;
     align-items: stretch;
     box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.08);
-    /* Safe area for devices with gesture bar */
     padding-bottom: env(safe-area-inset-bottom, 0px);
     height: calc(60px + env(safe-area-inset-bottom, 0px));
 }
@@ -113,46 +98,136 @@
     justify-content: center;
 }
 
-/* ── 4. Dashboard page — map full screen, floating vehicle panel ── */
+/* ── 4. Dashboard — map full screen, collapsible vehicle panel ── */
 .mobile-app .dashboard-map-area {
     height: 100%;
     flex: 1;
+    position: relative;
 }
 
-/* Vehicle list panel — force bottom sheet style on mobile */
-.mobile-app [style*="position: absolute"][style*="left: 1rem"][style*="top:"],
-.mobile-app [style*="position: absolute"][style*="left: 1rem"][style*="zIndex"] {
-    /* overridden per-panel below */
+/* Hide stats card on mobile — only show the vehicle list */
+.mobile-app .float-stats-card {
+    display: none !important;
 }
 
-/* The floating left vehicle search panel on dashboard */
-/* (it has inline style, so we use a more specific approach via class below) */
+/* Vehicle list panel — becomes a collapsible bottom sheet on mobile */
+.mobile-app .dashboard-float-left {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    top: auto !important;
+    z-index: 500;
+    display: flex;
+    flex-direction: column;
+    pointer-events: none;
+}
+
+.mobile-app .float-vehicles-card {
+    pointer-events: auto;
+    position: fixed;
+    bottom: 60px; /* above tab bar */
+    bottom: calc(60px + env(safe-area-inset-bottom, 0px));
+    left: 0;
+    right: 0;
+    max-height: 65vh;
+    background: white;
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transform: translateY(100%);
+    transition: transform 0.32s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 500;
+}
+
+/* When vehicle panel is open */
+.mobile-app .float-vehicles-card.mobile-panel-open {
+    transform: translateY(0);
+}
+
+/* Drag handle */
+.mobile-app .float-vehicles-card::before {
+    content: '';
+    display: block;
+    width: 36px;
+    height: 4px;
+    background: var(--gray-300, #dadce0);
+    border-radius: 2px;
+    margin: 10px auto 6px;
+    flex-shrink: 0;
+}
+
+/* Scrollable list inside */
+.mobile-app .float-vehicle-list {
+    overflow-y: auto;
+    flex: 1;
+    -webkit-overflow-scrolling: touch;
+}
+
+.mobile-app .float-search-row {
+    padding: 8px 16px;
+    border-bottom: 1px solid var(--gray-100, #f1f3f4);
+}
+
+.mobile-app .float-list-header {
+    padding: 4px 16px 8px;
+    font-size: 0.75rem;
+    color: var(--gray-500, #80868b);
+}
+
+/* Top-right dashboard controls — hide on mobile (too much clutter) */
+.mobile-app .dashboard-map-area > div[style*="position: absolute"][style*="top: '1rem'"][style*="right: '1rem'"] {
+    top: 8px !important;
+    right: 8px !important;
+}
 
 /* ── 5. Journey page mobile layout ─────────────────────────── */
 /*
- * Desktop: Sidebar (320–380px left) + Timeline (top) + Map (right).
- * Mobile:  Sidebar hidden as sheet. Map full screen. Controls at bottom.
+ * Desktop: Sidebar (280px left) + Timeline (top) + Map (right).
+ * Mobile:  Sidebar slides up from bottom as sheet. Map full screen.
+ *          FAB at top-left opens the sidebar.
  */
 
-/* Journey page: the outer aside (left sidebar with vehicle/date controls) */
+/* Journey page: the outer aside becomes a bottom sheet on mobile */
 .mobile-app aside {
     position: fixed !important;
-    top: 0 !important;
+    bottom: 60px !important;
+    bottom: calc(60px + env(safe-area-inset-bottom, 0px)) !important;
     left: 0 !important;
-    bottom: 0 !important;
+    right: 0 !important;
+    top: auto !important;
     width: 100vw !important;
     max-width: 100vw !important;
     min-width: unset !important;
+    height: 70vh !important;
+    max-height: 70vh !important;
     z-index: 8000 !important;
-    transform: translateX(-100%);
-    transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.18) !important;
+    transform: translateY(110%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.2) !important;
     overflow-y: auto !important;
-    height: 100dvh !important;
+    border-radius: 20px 20px 0 0 !important;
+    border-right: none !important;
+}
+
+/* Drag handle for aside sheet */
+.mobile-app aside::before {
+    content: '';
+    display: block;
+    width: 40px;
+    height: 4px;
+    background: var(--gray-300, #dadce0);
+    border-radius: 2px;
+    margin: 12px auto 0;
+    flex-shrink: 0;
+    position: sticky;
+    top: 0;
 }
 
 .mobile-app aside.mobile-open {
-    transform: translateX(0);
+    transform: translateY(0);
 }
 
 /* Backdrop for open drawer */
@@ -169,58 +244,187 @@
     display: block;
 }
 
-/* ── 6. Journey timeline bar — compact on mobile ───────────── */
-.mobile-app [style*="padding: '0.5rem 1rem'"] {
-    /* timeline bar — make it more compact */
-    padding: 6px 8px !important;
+/* Journey main area: take full height minus bottom bar */
+.mobile-app aside + div {
+    height: calc(100dvh - 60px) !important;
 }
 
-/* ── 7. Map overlay controls — reposition for mobile ───────── */
-/* Camera follow + Trail toggle buttons — move to safe positions */
-.mobile-app [style*="position: absolute"][style*="top: '1rem'"][style*="left: '1rem'"] {
-    top: 0.75rem !important;
+/* Timeline bar — hide on mobile (hidden behind bottom sheet overlay) */
+.mobile-app aside + div > div:first-child {
+    display: none !important;
+}
+
+/* ── 6. Journey FAB (open sidebar) ─────────────────────────── */
+.mobile-journey-fab {
+    display: none;
+}
+
+.mobile-app .mobile-journey-fab {
+    display: flex;
+    position: fixed;
+    bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+    left: 12px;
+    z-index: 7000;
+    align-items: center;
+    gap: 6px;
+    padding: 0 16px 0 12px;
+    height: 44px;
+    background: white;
+    border: 1px solid var(--gray-300, #dadce0);
+    border-radius: 22px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.2);
+    cursor: pointer;
+    color: var(--gray-700, #5f6368);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    font-family: inherit;
+    -webkit-tap-highlight-color: transparent;
+    transition: box-shadow 0.15s;
+}
+
+.mobile-app .mobile-journey-fab:active {
+    box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+}
+
+/* ── 7. Journey map controls reposition ─────────────────────── */
+/* Camera follow + Trail toggle — push up from bottom tab bar */
+.mobile-app [style*="position: absolute"][style*="bottom: '1.5rem'"][style*="left: '1rem'"] {
+    bottom: calc(72px + env(safe-area-inset-bottom, 0px)) !important;
     left: 0.5rem !important;
 }
 
-/* Vehicle info overlay — top-right */
+.mobile-app [style*="position: absolute"][style*="bottom: '1.5rem'"][style*="right: '1rem'"] {
+    bottom: calc(72px + env(safe-area-inset-bottom, 0px)) !important;
+    right: 0.5rem !important;
+}
+
+/* Vehicle info top-right — smaller on mobile */
 .mobile-app [style*="position: absolute"][style*="top: '1rem'"][style*="right: '1rem'"] {
-    top: 0.75rem !important;
+    top: 0.5rem !important;
     right: 0.5rem !important;
     min-width: unset !important;
     font-size: 0.75rem !important;
+    padding: 0.5rem 0.625rem !important;
 }
 
-/* Playback overlay — bottom left, account for tab bar */
-.mobile-app [style*="position: absolute"][style*="bottom: '1.5rem'"][style*="left: '1rem'"] {
-    bottom: 4.5rem !important;
-    left: 0.5rem !important;
-}
-
-/* Legend — bottom right, account for tab bar */
-.mobile-app [style*="position: absolute"][style*="bottom: '1.5rem'"][style*="right: '1rem'"] {
-    bottom: 4.5rem !important;
-    right: 0.5rem !important;
-}
-
-/* ── 8. Vehicles & Reports pages — make content scrollable ─── */
+/* ── 8. Vehicles page — compact mobile layout ───────────────── */
 .mobile-app .app-layout,
 .mobile-app .app-content {
     flex-direction: column;
     height: calc(100dvh - 60px);
 }
 
-/* ── 9. Vehicle detail page — responsive grid ──────────────── */
-/* Two-column info grid → single column on mobile */
-.mobile-app [style*="gridTemplateColumns: '1fr 1fr'"] {
+/* Vehicles page header bar — stack on mobile */
+/* The header with title + search + add + refresh */
+.mobile-app .dashboard-shell > div > div[style*="minHeight: 56"] {
+    padding: 0 12px !important;
+    flex-wrap: wrap;
+    min-height: 48px !important;
+    gap: 0.5rem !important;
+}
+
+/* Compact search bar in header */
+.mobile-app .dashboard-shell > div > div div[style*="minWidth: 220"] {
+    min-width: 0 !important;
+    width: 140px !important;
+    flex: 1;
+}
+
+/* "Add Device" button — smaller text */
+.mobile-app .dashboard-shell > div > div button[style*="background: var(--primary-500)"][style*="whiteSpace: nowrap"] {
+    padding: 0.4rem 0.625rem !important;
+    font-size: 0.8rem !important;
+}
+
+/* Table: make it scrollable, smaller font */
+.mobile-app table {
+    font-size: 0.8rem;
+}
+
+.mobile-app th,
+.mobile-app td {
+    padding: 8px 10px !important;
+    font-size: 0.75rem !important;
+}
+
+/* On mobile, hide the "Identifier" and "Actions" columns from the vehicles table
+   to make the table fit. Show only name, status, speed, last-activity. */
+.mobile-app table thead th:nth-child(2),
+.mobile-app table tbody td:nth-child(2) {
+    display: none !important;
+}
+
+/* Make expanded detail grid stack single column on mobile */
+.mobile-app [style*="gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))'"] {
+    grid-template-columns: 1fr 1fr !important;
+}
+
+/* Tab filter buttons — allow wrapping */
+.mobile-app [style*="padding: '0 24px'"][style*="display: 'flex'"][style*="gap: '0'"] {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+    padding: 0 12px !important;
+}
+
+/* ── 9. Account page — responsive overhaul ──────────────────── */
+
+/* Main scrollable area: reduce padding */
+.mobile-app .dashboard-shell > div[style] > div[style*="overflow-y"] {
+    padding: 1rem 0.875rem !important;
+}
+
+/* Account header: reduce padding */
+.mobile-app .dashboard-shell > div[style] > div:first-child {
+    padding-left: 0.875rem !important;
+    padding-right: 0.875rem !important;
+    min-height: 52px !important;
+    flex-wrap: wrap;
+    gap: 0.5rem !important;
+}
+
+/* Profile card (white card with avatar + info) — stack vertically on mobile */
+.mobile-app [style*="border-radius"][style*="overflow: hidden"],
+.mobile-app [style*="borderRadius"][style*="overflow"] {
+    /* Let components handle their own spacing */
+}
+
+/* Two-column grid → single column on mobile */
+.mobile-app [style*="grid-template-columns: 1fr 1fr"] {
     grid-template-columns: 1fr !important;
 }
 
-/* Stat cards grid — 2 columns on mobile */
-.mobile-app [style*="gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))'"] {
-    grid-template-columns: repeat(2, 1fr) !important;
+/* Three-column app info grid → single column */
+.mobile-app [style*="grid-template-columns: 1fr 1fr 1fr"] {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 0.625rem !important;
 }
 
-/* ── 10. Login page — already responsive, minor tweaks ─────── */
+/* Profile row (avatar + info + stats) — stack vertically */
+.mobile-app [style*="align-items: center"][style*="gap: 1.25rem"][style*="padding: 1.5rem"],
+.mobile-app [style*="alignItems"][style*="1.25rem"][style*="1.5rem"] {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+}
+
+/* Fleet stats row in profile — spread across full width */
+.mobile-app [style*="flex-shrink: 0"][style*="gap: 1rem"],
+.mobile-app [style*="flexShrink: 0"][style*="gap"] {
+    width: 100% !important;
+    justify-content: space-around !important;
+}
+
+/* My Devices section: reduce the 5-column grid to show only name + plate + status */
+.mobile-app [style*="grid-template-columns: 1fr 1fr 1fr 1fr 1fr"] {
+    grid-template-columns: 1fr 1fr auto !important;
+}
+
+/* Hide the 4th and 5th grid column items (Traccar ID, Last Update) */
+.mobile-app [style*="grid-template-columns: 1fr 1fr 1fr 1fr 1fr"] > *:nth-child(4),
+.mobile-app [style*="grid-template-columns: 1fr 1fr 1fr 1fr 1fr"] > *:nth-child(5) {
+    display: none !important;
+}
+
+/* ── 10. Login page ──────────────────────────────────────────── */
 .mobile-app .login-card {
     margin: env(safe-area-inset-top, 16px) 1rem 1rem;
     padding: 2rem 1.5rem;
@@ -230,53 +434,28 @@
 .mobile-app button,
 .mobile-app a[href] {
     min-height: 44px;
-    min-width: 44px;
 }
 
-/* Exception for icon-only small buttons */
+/* Exception: small icon buttons */
+.mobile-app button[style*="width: 28"],
 .mobile-app button[style*="width: 34"],
+.mobile-app button[style*="width: '28px'"],
 .mobile-app button[style*="width: '34px'"] {
     min-height: unset;
     min-width: unset;
 }
 
-/* Form inputs bigger on mobile */
+/* Form inputs: 16px prevents iOS zoom on focus */
 .mobile-app .form-input,
 .mobile-app input[type="text"],
 .mobile-app input[type="email"],
 .mobile-app input[type="password"],
+.mobile-app input[type="date"],
 .mobile-app select {
-    font-size: 16px !important; /* prevents iOS zoom on focus */
-    height: 48px;
-    padding: 0 1rem;
+    font-size: 16px !important;
 }
 
-/* ── 12. Mobile header for journey page──────────────────────── */
-/* FAB button to open journey sidebar on mobile */
-.mobile-journey-fab {
-    display: none;
-}
-
-.mobile-app .mobile-journey-fab {
-    display: flex;
-    position: fixed;
-    top: 12px;
-    left: 12px;
-    z-index: 7000;
-    width: 44px;
-    height: 44px;
-    background: white;
-    border: 1px solid var(--gray-300, #dadce0);
-    border-radius: 50%;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-    cursor: pointer;
-    color: var(--gray-700, #5f6368);
-    -webkit-tap-highlight-color: transparent;
-}
-
-/* ── 13. Scrollbar — hide on mobile (touch scrolling is native) ── */
+/* ── 12. Scrollbar — hide (native touch scrolling) ─────────── */
 .mobile-app ::-webkit-scrollbar {
     display: none;
 }
@@ -285,28 +464,27 @@
     scrollbar-width: none;
 }
 
-/* ── 14. Google Maps controls positioning fix ──────────────── */
-/* Push Google Maps zoom/fullscreen controls above bottom tab bar */
+/* ── 13. Google Maps controls positioning fix ──────────────── */
 .mobile-app .gm-bundled-control {
     bottom: 72px !important;
 }
 
 .mobile-app .gm-fullscreen-control {
-    display: none !important; /* fullscreen is redundant in WebView */
+    display: none !important;
 }
 
-/* ── 15. Loading spinner — center in available space ──────── */
+/* ── 14. Loading spinner — center in available space ──────── */
 .mobile-app .map-loading {
     height: calc(100dvh - 60px) !important;
 }
 
-/* ── 16. Animation performance ─────────────────────────────── */
-.mobile-app * {
-    /* Promote composited layers for animations */
-    will-change: auto;
+/* ── 15. Animation performance ─────────────────────────────── */
+.mobile-app aside,
+.mobile-app .float-vehicles-card {
+    will-change: transform;
 }
 
-/* Specific elements that animate */
-.mobile-app aside {
-    will-change: transform;
+/* ── 16. Safe area padding for fixed elements ──────────────── */
+.mobile-app .dashboard-shell {
+    padding-bottom: 0;
 }

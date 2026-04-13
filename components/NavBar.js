@@ -210,7 +210,15 @@ export default function NavBar() {
                             key={item.href}
                             href={item.href}
                             className={`mobile-bottom-nav__item${active ? ' mobile-bottom-nav__item--active' : ''}`}
-                            onClick={(e) => { e.preventDefault(); router.push(item.href); }}
+                            onClick={(e) => {
+                                e.preventDefault();
+                                // Live tab: if already on dashboard, toggle vehicle panel
+                                if (item.href === '/dashboard' && pathname === '/dashboard') {
+                                    window.dispatchEvent(new CustomEvent('trackpro:toggle-live-panel'));
+                                } else {
+                                    router.push(item.href);
+                                }
+                            }}
                             aria-current={active ? 'page' : undefined}
                         >
                             <span className="mobile-bottom-nav__icon">{item.icon}</span>
