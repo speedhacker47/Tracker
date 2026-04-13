@@ -1,0 +1,312 @@
+/*
+ * ============================================================
+ * TrackPro Mobile CSS
+ * Activates only when <html class="mobile-app"> is present.
+ * Injected by layout.js when ?source=app or UA = TrackProApp.
+ * Desktop layout is 100% untouched.
+ * ============================================================
+ */
+
+/* ── 1. Global mobile base ─────────────────────────────────── */
+.mobile-app {
+    /* Prevent iOS text resize quirk */
+    -webkit-text-size-adjust: 100%;
+    /* Better touch targets */
+    touch-action: manipulation;
+}
+
+.mobile-app body {
+    /* Remove any rubber-band scroll on body */
+    overscroll-behavior: none;
+    /* Use system font stack (faster on low-end devices) */
+    font-family: -apple-system, 'Inter', sans-serif;
+}
+
+/* Disable hover-only state changes — not relevant on touch */
+.mobile-app *:hover {
+    /* let onMouseEnter/Leave JS still work for now,
+       but don't rely on CSS :hover for visual changes */
+}
+
+/* ── 2. Dashboard shell — stack vertical on mobile ─────────── */
+/*
+ * Desktop: NavBar (left, 54–230px) + content (flex: 1) side by side.
+ * Mobile:  Content takes full width. NavBar hidden. Bottom tab bar shows.
+ */
+.mobile-app .dashboard-shell {
+    flex-direction: column;
+    height: calc(100vh - 60px); /* reserve space for bottom tab bar */
+    height: calc(100dvh - 60px); /* dynamic viewport on Android Chrome */
+    overflow: hidden;
+}
+
+/* Hide the left sidebar on mobile completely */
+.mobile-app nav[style*="width"] {
+    display: none !important;
+}
+
+/* ── 3. Bottom tab bar (rendered by NavBar.js) ─────────────── */
+.mobile-bottom-nav {
+    display: none; /* hidden on desktop */
+}
+
+.mobile-app .mobile-bottom-nav {
+    display: flex;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 60px;
+    background: var(--nav-bg, white);
+    border-top: 1px solid var(--nav-border, #e8eaed);
+    z-index: 9999;
+    align-items: stretch;
+    box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.08);
+    /* Safe area for devices with gesture bar */
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    height: calc(60px + env(safe-area-inset-bottom, 0px));
+}
+
+.mobile-bottom-nav__item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    color: var(--nav-text-muted, #9aa0a6);
+    font-family: inherit;
+    font-size: 0.625rem;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    padding: 8px 4px 6px;
+    transition: color 0.15s ease;
+    text-decoration: none;
+    -webkit-tap-highlight-color: transparent;
+    position: relative;
+}
+
+.mobile-bottom-nav__item--active {
+    color: var(--primary-500, #1a73e8);
+}
+
+.mobile-bottom-nav__item--active::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 32px;
+    height: 3px;
+    background: var(--primary-500, #1a73e8);
+    border-radius: 0 0 3px 3px;
+}
+
+.mobile-bottom-nav__icon {
+    width: 22px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* ── 4. Dashboard page — map full screen, floating vehicle panel ── */
+.mobile-app .dashboard-map-area {
+    height: 100%;
+    flex: 1;
+}
+
+/* Vehicle list panel — force bottom sheet style on mobile */
+.mobile-app [style*="position: absolute"][style*="left: 1rem"][style*="top:"],
+.mobile-app [style*="position: absolute"][style*="left: 1rem"][style*="zIndex"] {
+    /* overridden per-panel below */
+}
+
+/* The floating left vehicle search panel on dashboard */
+/* (it has inline style, so we use a more specific approach via class below) */
+
+/* ── 5. Journey page mobile layout ─────────────────────────── */
+/*
+ * Desktop: Sidebar (320–380px left) + Timeline (top) + Map (right).
+ * Mobile:  Sidebar hidden as sheet. Map full screen. Controls at bottom.
+ */
+
+/* Journey page: the outer aside (left sidebar with vehicle/date controls) */
+.mobile-app aside {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    bottom: 0 !important;
+    width: 100vw !important;
+    max-width: 100vw !important;
+    min-width: unset !important;
+    z-index: 8000 !important;
+    transform: translateX(-100%);
+    transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.18) !important;
+    overflow-y: auto !important;
+    height: 100dvh !important;
+}
+
+.mobile-app aside.mobile-open {
+    transform: translateX(0);
+}
+
+/* Backdrop for open drawer */
+.mobile-app .mobile-drawer-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    z-index: 7999;
+    backdrop-filter: blur(1px);
+}
+
+.mobile-app .mobile-drawer-backdrop.open {
+    display: block;
+}
+
+/* ── 6. Journey timeline bar — compact on mobile ───────────── */
+.mobile-app [style*="padding: '0.5rem 1rem'"] {
+    /* timeline bar — make it more compact */
+    padding: 6px 8px !important;
+}
+
+/* ── 7. Map overlay controls — reposition for mobile ───────── */
+/* Camera follow + Trail toggle buttons — move to safe positions */
+.mobile-app [style*="position: absolute"][style*="top: '1rem'"][style*="left: '1rem'"] {
+    top: 0.75rem !important;
+    left: 0.5rem !important;
+}
+
+/* Vehicle info overlay — top-right */
+.mobile-app [style*="position: absolute"][style*="top: '1rem'"][style*="right: '1rem'"] {
+    top: 0.75rem !important;
+    right: 0.5rem !important;
+    min-width: unset !important;
+    font-size: 0.75rem !important;
+}
+
+/* Playback overlay — bottom left, account for tab bar */
+.mobile-app [style*="position: absolute"][style*="bottom: '1.5rem'"][style*="left: '1rem'"] {
+    bottom: 4.5rem !important;
+    left: 0.5rem !important;
+}
+
+/* Legend — bottom right, account for tab bar */
+.mobile-app [style*="position: absolute"][style*="bottom: '1.5rem'"][style*="right: '1rem'"] {
+    bottom: 4.5rem !important;
+    right: 0.5rem !important;
+}
+
+/* ── 8. Vehicles & Reports pages — make content scrollable ─── */
+.mobile-app .app-layout,
+.mobile-app .app-content {
+    flex-direction: column;
+    height: calc(100dvh - 60px);
+}
+
+/* ── 9. Vehicle detail page — responsive grid ──────────────── */
+/* Two-column info grid → single column on mobile */
+.mobile-app [style*="gridTemplateColumns: '1fr 1fr'"] {
+    grid-template-columns: 1fr !important;
+}
+
+/* Stat cards grid — 2 columns on mobile */
+.mobile-app [style*="gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))'"] {
+    grid-template-columns: repeat(2, 1fr) !important;
+}
+
+/* ── 10. Login page — already responsive, minor tweaks ─────── */
+.mobile-app .login-card {
+    margin: env(safe-area-inset-top, 16px) 1rem 1rem;
+    padding: 2rem 1.5rem;
+}
+
+/* ── 11. Touch target improvements ─────────────────────────── */
+.mobile-app button,
+.mobile-app a[href] {
+    min-height: 44px;
+    min-width: 44px;
+}
+
+/* Exception for icon-only small buttons */
+.mobile-app button[style*="width: 34"],
+.mobile-app button[style*="width: '34px'"] {
+    min-height: unset;
+    min-width: unset;
+}
+
+/* Form inputs bigger on mobile */
+.mobile-app .form-input,
+.mobile-app input[type="text"],
+.mobile-app input[type="email"],
+.mobile-app input[type="password"],
+.mobile-app select {
+    font-size: 16px !important; /* prevents iOS zoom on focus */
+    height: 48px;
+    padding: 0 1rem;
+}
+
+/* ── 12. Mobile header for journey page──────────────────────── */
+/* FAB button to open journey sidebar on mobile */
+.mobile-journey-fab {
+    display: none;
+}
+
+.mobile-app .mobile-journey-fab {
+    display: flex;
+    position: fixed;
+    top: 12px;
+    left: 12px;
+    z-index: 7000;
+    width: 44px;
+    height: 44px;
+    background: white;
+    border: 1px solid var(--gray-300, #dadce0);
+    border-radius: 50%;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    cursor: pointer;
+    color: var(--gray-700, #5f6368);
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* ── 13. Scrollbar — hide on mobile (touch scrolling is native) ── */
+.mobile-app ::-webkit-scrollbar {
+    display: none;
+}
+
+.mobile-app * {
+    scrollbar-width: none;
+}
+
+/* ── 14. Google Maps controls positioning fix ──────────────── */
+/* Push Google Maps zoom/fullscreen controls above bottom tab bar */
+.mobile-app .gm-bundled-control {
+    bottom: 72px !important;
+}
+
+.mobile-app .gm-fullscreen-control {
+    display: none !important; /* fullscreen is redundant in WebView */
+}
+
+/* ── 15. Loading spinner — center in available space ──────── */
+.mobile-app .map-loading {
+    height: calc(100dvh - 60px) !important;
+}
+
+/* ── 16. Animation performance ─────────────────────────────── */
+.mobile-app * {
+    /* Promote composited layers for animations */
+    will-change: auto;
+}
+
+/* Specific elements that animate */
+.mobile-app aside {
+    will-change: transform;
+}
