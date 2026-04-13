@@ -5,6 +5,64 @@ import { usePathname, useRouter } from 'next/navigation';
 import { signOut } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 
+// Bottom nav items (subset of NAV_ITEMS — most important 5 for mobile)
+const MOBILE_NAV_ITEMS = [
+    {
+        label: 'Live',
+        href: '/dashboard',
+        icon: (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="3" />
+                <path d="M12 2v4" /><path d="M12 18v4" />
+                <path d="M4.93 4.93l2.83 2.83" /><path d="M16.24 16.24l2.83 2.83" />
+                <path d="M2 12h4" /><path d="M18 12h4" />
+                <path d="M4.93 19.07l2.83-2.83" /><path d="M16.24 7.76l2.83-2.83" />
+            </svg>
+        ),
+    },
+    {
+        label: 'Vehicles',
+        href: '/vehicles',
+        icon: (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="1" y="3" width="15" height="13" rx="2" />
+                <polygon points="16 8 20 8 23 11 23 16 16 16 16 8" />
+                <circle cx="5.5" cy="18.5" r="2.5" />
+                <circle cx="18.5" cy="18.5" r="2.5" />
+            </svg>
+        ),
+    },
+    {
+        label: 'Journey',
+        href: '/journey',
+        icon: (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+            </svg>
+        ),
+    },
+    {
+        label: 'Alerts',
+        href: '/alerts',
+        icon: (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+            </svg>
+        ),
+    },
+    {
+        label: 'Account',
+        href: '/account',
+        icon: (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                <circle cx="12" cy="7" r="4" />
+            </svg>
+        ),
+    },
+];
+
 const NAV_ITEMS = [
     {
         label: 'Live Tracking',
@@ -126,6 +184,43 @@ export default function NavBar() {
     };
 
     const w = ready ? (expanded ? EXPANDED_W : COLLAPSED_W) : EXPANDED_W;
+
+    // ── Mobile detection ──────────────────────────────────────────────────────
+    const [isMobile, setIsMobile] = useState(false);
+    useEffect(() => {
+        const check = () => setIsMobile(
+            document.documentElement.classList.contains('mobile-app')
+        );
+        check();
+        // Watch for class changes (e.g. if added async)
+        const obs = new MutationObserver(check);
+        obs.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+        return () => obs.disconnect();
+    }, []);
+
+    // ── Mobile: bottom tab bar ─────────────────────────────────────────────────
+    if (isMobile) {
+        return (
+            <nav className="mobile-bottom-nav" role="navigation" aria-label="Main navigation">
+                {MOBILE_NAV_ITEMS.map((item) => {
+                    const active = pathname === item.href ||
+                        (item.href !== '/dashboard' && pathname.startsWith(item.href));
+                    return (
+                        <a
+                            key={item.href}
+                            href={item.href}
+                            className={`mobile-bottom-nav__item${active ? ' mobile-bottom-nav__item--active' : ''}`}
+                            onClick={(e) => { e.preventDefault(); router.push(item.href); }}
+                            aria-current={active ? 'page' : undefined}
+                        >
+                            <span className="mobile-bottom-nav__icon">{item.icon}</span>
+                            <span>{item.label}</span>
+                        </a>
+                    );
+                })}
+            </nav>
+        );
+    }
 
     // Sun icon (light mode)
     const SunIcon = (
